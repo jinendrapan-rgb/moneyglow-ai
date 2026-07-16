@@ -12561,35 +12561,11 @@ function buildPWAManifest(){
 // Run on load
 buildPWAManifest();
 
-// Optional: register a basic service worker for offline use (when served from HTTPS)
+// Optional: register a basic service worker for offline use (when served from HTTPS).
+// Must be a real same-origin file — browsers reject "blob:" URLs for SW scripts
+// (a blob-based attempt here silently failed on every load; see REFACTORS.md).
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  // Inline minimal SW via blob
-  const swCode = `
-    const CACHE = 'finance-tracker-v1';
-    self.addEventListener('install', e => self.skipWaiting());
-    self.addEventListener('activate', e => self.clients.claim());
-    self.addEventListener('fetch', e => {
-      // Cache-first for same-origin requests (the HTML file)
-      if (e.request.url.startsWith(self.location.origin)) {
-        e.respondWith(
-          caches.open(CACHE).then(cache =>
-            cache.match(e.request).then(cached => {
-              const fetchPromise = fetch(e.request).then(res => {
-                if (res.ok) cache.put(e.request, res.clone());
-                return res;
-              }).catch(() => cached);
-              return cached || fetchPromise;
-            })
-          )
-        );
-      }
-    });
-  `;
-  try {
-    const blob = new Blob([swCode], {type: 'application/javascript'});
-    const swUrl = URL.createObjectURL(blob);
-    navigator.serviceWorker.register(swUrl).catch(e => console.warn('SW registration failed:', e));
-  } catch(e) { console.warn('SW setup failed:', e); }
+  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW registration failed:', e));
 }
 
 // PWA install hint for iOS Safari (no programmatic install — must show instructions)
