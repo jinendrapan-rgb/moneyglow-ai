@@ -4729,28 +4729,6 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   <span id="aiFabIcon">🤖</span>
 </button>
 
-<!-- QUICK NAV (Phase 9) — fast jump to the product brief's 10 recommended sections
-     without a full page-routing rewrite (this app is a single scrolling page of
-     collapsible cards; a true multi-page nav would be a rebuild, not a cleanup). -->
-<style>
-  .quicknav-fab { position: fixed; bottom: 20px; left: 20px; width: 52px; height: 52px; border-radius: 50%;
-    background: rgba(15,23,42,0.9); border: 1px solid rgba(255,255,255,0.15); color: #e2e8f0; font-size: 20px;
-    cursor: pointer; z-index: 9998; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-  .quicknav-menu { position: fixed; bottom: 80px; left: 20px; z-index: 9998; background: rgba(8,14,30,0.97);
-    backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 8px;
-    display: flex; flex-direction: column; gap: 2px; min-width: 200px; max-height: 70vh; overflow-y: auto; }
-  .quicknav-menu button { background: none; border: none; color: #e2e8f0; text-align: left; padding: 9px 10px;
-    border-radius: 8px; font-size: 13px; cursor: pointer; font-family: inherit; }
-  .quicknav-menu button:hover, .quicknav-menu button:active { background: rgba(139,92,246,0.15); }
-  body.theme-light .quicknav-fab, body.theme-light .quicknav-menu { background: rgba(255,255,255,0.92); color: #0f172a; border-color: rgba(0,0,0,0.08); }
-  body.theme-light .quicknav-menu button { color: #0f172a; }
-</style>
-<!-- Hidden, not removed, in the Mobile UX redesign (MOBILE_REDESIGN.md) — the 5-tab bottom nav
-     now covers "jump to a section" directly; QUICK_NAV_ITEMS/toggleQuickNav() stay intact and
-     unused rather than deleted, since removing them isn't necessary for this pass. -->
-<button class="quicknav-fab" id="quicknavFab" onclick="toggleQuickNav()" title="Jump to section" style="display:none">☰</button>
-<div class="quicknav-menu" id="quicknavMenu" style="display:none"></div>
-
 <div class="ai-panel" id="aiPanel">
   <div class="ai-header">
     <h3>
@@ -6307,8 +6285,8 @@ calc();
 // applies WITHIN a single script tag, not across separate ones executing in document
 // order). Calling it directly here threw an uncaught "applyFeatureFlags is not defined"
 // during real bootstrap, which silently aborted the REST of this script block —
-// including QUICK_NAV_ITEMS's declaration further down, breaking Quick Nav entirely.
-// This is a different bug class than the const-TDZ issues elsewhere in this file (see
+// breaking everything declared further down in it. This is a different bug
+// class than the const-TDZ issues elsewhere in this file (see
 // SCORE_HISTORY_KEY/LIFE_DECISIONS/FEATURE_FLAG_DEFS comments) and needed a different
 // fix: defer with setTimeout so it runs after every script block has finished executing,
 // instead of trying to hunt down which specific earlier block to move the function into.
@@ -7018,41 +6996,6 @@ function goToOpportunity(sectionId, labTab){
     card.scrollIntoView({ behavior: mgScrollBehavior(), block: 'start' });
   }
   if (labTab && typeof switchLabTab === 'function') setTimeout(() => switchLabTab(labTab), 300);
-}
-
-// ---------- QUICK NAV (Phase 9) ----------
-// The product brief's 10-item recommended navigation, adapted to this app's real
-// anchors (single scrolling page, not a router) rather than a fabricated multi-page menu.
-const QUICK_NAV_ITEMS = [
-  { icon: '🏠', label: 'Home', action: () => window.scrollTo({ top: 0, behavior: mgScrollBehavior() }) },
-  { icon: '🤖', label: 'MoneyGlow Copilot', action: () => { if (!document.getElementById('aiPanel').classList.contains('show')) toggleAI(); } },
-  { icon: '🧪', label: 'Financial Decision Lab', action: () => goToOpportunity('sec-whatif') },
-  { icon: '🧭', label: 'Life Decisions', action: () => goToOpportunity('sec-lifedecisions') },
-  { icon: '🔮', label: 'Smart Forecasts', action: () => goToOpportunity('sec-smartforecasts') },
-  { icon: '🛤️', label: 'Financial Timeline', action: () => goToOpportunity('sec-timeline') },
-  { icon: '🎮', label: 'Missions & Achievements', action: () => goToOpportunity('sec-gamification') },
-  { icon: '📈', label: 'Monthly CEO Report', action: () => goToOpportunity('sec-ceoreport') },
-  { icon: '💰', label: 'Wealth Mode', action: () => goToOpportunity('sec-wealthmode') },
-  { icon: '👨‍👩‍👧‍👦', label: 'Family Financial Hub', action: () => goToOpportunity('sec-familyhub') },
-  { icon: '📅', label: 'Cash Flow', action: () => goToOpportunity('sec-budget') },
-  { icon: '🔥', label: 'Debt Center', action: () => goToOpportunity('sec-debts') },
-  { icon: '💎', label: 'Goals', action: () => goToOpportunity('sec-goals') },
-  { icon: '💡', label: 'Opportunity Center', action: () => goToOpportunity('sec-opportunities') },
-  { icon: '🎯', label: 'Reports', action: () => goToOpportunity('sec-forecast') },
-  { icon: '⚙️', label: 'Settings', action: () => openPremiumModal() },
-  { icon: '🛡️', label: 'Trust Center', action: () => openTrustCenter('overview') }
-];
-
-function toggleQuickNav(){
-  const menu = document.getElementById('quicknavMenu');
-  if (menu.style.display === 'block') { menu.style.display = 'none'; return; }
-  menu.innerHTML = QUICK_NAV_ITEMS.map((item, i) => `<button onclick="quickNavTo(${i})">${item.icon} ${item.label}</button>`).join('');
-  menu.style.display = 'block';
-}
-
-function quickNavTo(i){
-  document.getElementById('quicknavMenu').style.display = 'none';
-  QUICK_NAV_ITEMS[i].action();
 }
 
 function renderOpportunityCenter(){
