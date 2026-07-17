@@ -26,6 +26,20 @@
 <link rel="icon" id="favIcon"/>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* Mobile UX redesign, Phase 6 (MOBILE_REDESIGN.md) — global reduced-motion support.
+     Standard kill-switch pattern: collapses every animation/transition to effectively
+     instant rather than requiring an audit of each individual one. JS-driven smooth
+     scrolls (scrollIntoView/scrollTo with behavior:'smooth') aren't covered by CSS
+     scroll-behavior when the behavior is passed inline, so those are gated separately
+     via mgScrollBehavior() in the script. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   html { font-size: 16px; -webkit-text-size-adjust: 100%; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -831,21 +845,8 @@
   }
   .ai-fab:hover { transform: scale(1.08); box-shadow: 0 12px 32px rgba(139,92,246,0.7); }
   .ai-fab:active { transform: scale(0.95); }
-  .ai-fab .badge-notif {
-    position: absolute;
-    top: 4px; right: 4px;
-    background: #ef4444;
-    color: white;
-    border-radius: 50%;
-    min-width: 20px; height: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0 5px;
-    animation: pulse 2s ease-in-out infinite;
-  }
+  /* #aiNotifBadge itself moved onto the Copilot bottom-nav tab in the Mobile UX redesign
+     (MOBILE_REDESIGN.md Phase 5) — see .bottom-nav-item .badge-notif for its new styling. */
 
   .ai-panel {
     position: fixed;
@@ -3113,7 +3114,7 @@ h1 {
   color: #94a3b8 !important;
   backdrop-filter: blur(8px) !important;
   white-space: nowrap !important;
-  min-height: 38px !important;
+  min-height: 44px !important;
   font-family: inherit !important;
 }
 .mg-tool-btn:hover {
@@ -3657,6 +3658,42 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     </div>
   </header>
 
+  <!-- Global toolbar + offer banner — relocated here in Phase 4 (MOBILE_REDESIGN.md).
+       No data-screen attribute, so (like the quick-bar and header above) it's always
+       visible regardless of the active tab. It used to sit further down the document,
+       between two of Copilot's/Goals'/More's own sections — since those sections are
+       shown/hidden by data-screen attribute rather than physically reordered, that put
+       this always-visible block in the MIDDLE of those screens' content instead of
+       above it, splitting their tab bar from part of their own sections. Moving it here,
+       next to the other always-visible chrome, fixes that for every screen at once. -->
+  <div class="toolbar mg-toolbar">
+    <button class="mg-tool-btn" onclick="expandAll()" title="Expand All">⬇ <span class="mg-btn-label">Expand</span></button>
+    <button class="mg-tool-btn" onclick="collapseAll()" title="Collapse All">⬆ <span class="mg-btn-label">Collapse</span></button>
+    <button class="mg-tool-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">🌙 <span class="mg-btn-label">Theme</span></button>
+    <button class="mg-tool-btn privacy-btn" id="hideBalanceBtn" onclick="toggleHideBalances()" title="Hide Amounts">👁 <span class="mg-btn-label">Hide</span></button>
+    <button class="mg-tool-btn privacy-btn-backup" onclick="backupOrPremium()" id="backupToolbarBtn" title="Backup your data">☁ <span class="mg-btn-label">Backup</span></button>
+    <button class="mg-tool-btn privacy-btn-lock" onclick="lockOrPremium()" id="lockToolbarBtn" title="Lock App (Premium)">🔒 <span class="mg-btn-label">Lock</span></button>
+    <button class="mg-tool-btn pdf-export-btn" onclick="exportPDFReport()" title="PDF Report">📄 <span class="mg-btn-label">Report</span></button>
+    <button class="mg-tool-btn lang-btn" onclick="openLangPicker()" id="langToolbarBtn" title="Language">🌐 <span class="mg-btn-label" id="langLabel">EN</span></button>
+    <button class="mg-tool-btn mg-settings-btn" id="premiumToolbarBtn" onclick="openPremiumModal()" title="Settings & Premium">⚙ <span class="mg-btn-label">Settings</span></button>
+    <button class="mg-tool-btn" onclick="mgShowInstallModal()" title="Install as App">📱 <span class="mg-btn-label">Install</span></button>
+    <button class="mg-tool-btn mg-feedback-btn" onclick="openFeedbackModal()" title="Feedback">💬 <span class="mg-btn-label">Feedback</span></button>
+  </div>
+
+  <!-- 🎁 Limited-Time Offer Banner -->
+  <div class="offer-banner" id="offerBanner" onclick="openPremiumModal('🎁 FREE Premium')" style="display:none">
+    <div class="offer-icon">🎁</div>
+    <div class="offer-content">
+      <div class="offer-title" id="offerTitle">FREE for the first 10 signups!</div>
+      <div class="offer-subtitle" id="offerSubtitle">Sign up + message <strong>"free"</strong> to James → get Premium FREE for life. <strong>Tap for details.</strong></div>
+    </div>
+    <div class="offer-countdown" id="offerCountdown">
+      <div class="label">Spots left</div>
+      <div id="offerSpots">10</div>
+    </div>
+    <button class="offer-dismiss-btn" onclick="event.stopPropagation();dismissOffer()" title="Dismiss">×</button>
+  </div>
+
   <!-- COMMAND CENTER — financial health score, cash snapshot, debt-free date, interest savings potential -->
   <style>
     .hero-command { padding: 16px; margin-bottom: 14px; border-radius: 16px;
@@ -3690,27 +3727,128 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     body.theme-light .hero-stat { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
     body.theme-light .hero-stat .value { color: #0f172a; }
   </style>
-  <div class="card hero-command" id="sec-hero">
-    <div class="hero-top">
+  <!-- ═══ HOME SCREEN (Mobile UX redesign — see MOBILE_REDESIGN.md Phase 2) ═══ -->
+  <style>
+    /* A. Personalized greeting */
+    .home-greeting { padding: 4px 2px 14px; }
+    .home-greeting h2 { font-size: 20px; font-weight: 800; margin: 0 0 4px; color: var(--mg-text); }
+    .home-greeting p { font-size: 13px; color: var(--mg-muted); margin: 0; }
+    /* B. Financial Health Hero — score/status/priority/date/risk only, no cash-flow numbers */
+    .health-hero-grid { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+    .health-hero-meta { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 8px; }
+    .health-hero-status { font-size: 13px; font-weight: 700; }
+    .health-hero-row { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; }
+    .health-hero-row .k { color: var(--mg-muted); }
+    .health-hero-row .v { font-weight: 700; color: var(--mg-text); text-align: right; }
+    .health-hero-risk { display: inline-block; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 800; letter-spacing: 0.03em; }
+    .health-hero-risk.risk-high { background: rgba(239,68,68,0.15); color: #f87171; }
+    .health-hero-risk.risk-medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+    .health-hero-risk.risk-low { background: rgba(16,185,129,0.15); color: #34d399; }
+    /* C. Today's Mission */
+    .mission-card { display: flex; flex-direction: column; gap: 8px; }
+    .mission-title { font-size: 15px; font-weight: 800; color: var(--mg-text); }
+    .mission-why { font-size: 12px; color: var(--mg-muted); }
+    .mission-progress-bar { background: rgba(255,255,255,0.08); border-radius: 6px; height: 8px; overflow: hidden; margin: 2px 0; }
+    .mission-progress-fill { background: linear-gradient(90deg, var(--mg-purple), var(--mg-blue)); height: 100%; transition: width 0.3s; }
+    .mission-progress-label { font-size: 11px; color: var(--mg-muted); }
+    .mission-cta { margin-top: 4px; background: rgba(139,92,246,0.15); color: #c4b5fd; border: 1px solid rgba(139,92,246,0.3); border-radius: 8px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; align-self: flex-start; }
+    /* D. AI plan CTA — standalone, own slot */
+    .ai-plan-cta-row { margin: 4px 0; }
+    /* E. Today's Snapshot — 2x2 tile grid */
+    .snapshot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .snapshot-tile { background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 12px; }
+    .snapshot-tile .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--mg-muted); margin-bottom: 4px; }
+    .snapshot-tile .value { font-size: 18px; font-weight: 800; color: var(--mg-text); }
+    .snapshot-tile .value.positive { color: #34d399; }
+    .snapshot-tile .value.negative { color: #f87171; }
+    body.theme-light .snapshot-tile { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    /* F. AI Hub shortcuts */
+    .aihub-list { display: flex; flex-direction: column; gap: 8px; }
+    .aihub-shortcut { display: flex; align-items: center; gap: 12px; background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 12px; cursor: pointer; text-align: left; width: 100%; font-family: inherit; color: inherit; }
+    .aihub-shortcut .icon { font-size: 22px; flex-shrink: 0; }
+    .aihub-shortcut .text { flex: 1; min-width: 0; }
+    .aihub-shortcut .name { font-size: 13px; font-weight: 700; color: var(--mg-text); }
+    .aihub-shortcut .preview { font-size: 11px; color: var(--mg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .aihub-shortcut .chevron { color: var(--mg-muted); flex-shrink: 0; }
+    body.theme-light .aihub-shortcut { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    /* G. Quick actions */
+    .quickactions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .quickaction-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 10px 4px; cursor: pointer; font-family: inherit; color: inherit; }
+    .quickaction-btn .icon { font-size: 18px; }
+    .quickaction-btn .label { font-size: 10px; font-weight: 600; color: var(--mg-muted); text-align: center; }
+    body.theme-light .quickaction-btn { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    /* H. Progress preview */
+    .progress-preview { display: flex; align-items: center; gap: 14px; }
+    .progress-preview-ring { width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800;
+      background: conic-gradient(var(--mg-purple) calc(var(--pp-pct,0) * 1%), rgba(255,255,255,0.08) 0); }
+    .progress-preview-inner { width: 44px; height: 44px; border-radius: 50%; background: var(--mg-bg); display: flex; align-items: center; justify-content: center; }
+    .progress-preview-text { flex: 1; }
+    .progress-preview-title { font-size: 13px; font-weight: 700; color: var(--mg-text); }
+    .progress-preview-sub { font-size: 11px; color: var(--mg-muted); margin-top: 2px; }
+  </style>
+
+  <!-- A. Personalized greeting -->
+  <div class="home-greeting" id="homeGreeting" data-screen="home"></div>
+
+  <!-- B. Financial Health Hero -->
+  <div class="card hero-command" id="sec-hero" data-screen="home">
+    <div class="health-hero-grid">
       <div class="hero-score-ring" id="heroScoreRing" onclick="showScoreBreakdown()" title="Tap to see why">
         <div class="hero-score-inner">
           <div class="hero-score-value" id="heroScoreValue">—</div>
           <div class="hero-score-max">/ 100</div>
         </div>
       </div>
-      <div style="flex:0 0 auto;text-align:center">
-        <div class="hero-score-caption" id="heroScoreCaption">Financial Health</div>
-      </div>
-      <div class="hero-stats">
-        <div class="hero-stat"><div class="label">Cash In</div><div class="value blur-money" id="heroCashIn">—</div></div>
-        <div class="hero-stat"><div class="label">Cash Out</div><div class="value blur-money" id="heroCashOut">—</div></div>
-        <div class="hero-stat"><div class="label">Free Cash</div><div class="value blur-money" id="heroFreeCash">—</div></div>
-        <div class="hero-stat"><div class="label">Debt-Free Date</div><div class="value" id="heroDebtFreeDate">—</div></div>
-        <div class="hero-stat wide"><div class="label">Interest Savings Potential</div><div class="value blur-money" id="heroInterestSavings">—</div></div>
+      <div class="health-hero-meta">
+        <div class="health-hero-status" id="heroScoreCaption">Financial Health</div>
+        <div class="health-hero-row"><span class="k">Top priority</span><span class="v" id="heroTopPriority">—</span></div>
+        <div class="health-hero-row"><span class="k">Debt-free target</span><span class="v" id="heroDebtFreeDate">—</span></div>
+        <div class="health-hero-row"><span class="k">Risk</span><span class="v"><span class="health-hero-risk" id="heroRiskLevel">—</span></span></div>
       </div>
     </div>
-    <div class="hero-cta-row">
-      <button class="hero-cta" onclick="generateAIPlan()">✨ Generate my AI plan</button>
+  </div>
+
+  <!-- C. Today's Mission -->
+  <div class="card" id="sec-mission" data-screen="home">
+    <h2>🎯 Today's Mission</h2>
+    <div class="card-body">
+      <div id="todaysMissionContent" class="mission-card"></div>
+    </div>
+  </div>
+
+  <!-- D. Generate My AI Plan CTA -->
+  <div class="ai-plan-cta-row" data-screen="home">
+    <button class="hero-cta" onclick="generateAIPlan()">✨ Generate my AI plan</button>
+  </div>
+
+  <!-- E. Today's Snapshot -->
+  <div class="card" id="sec-snapshot" data-screen="home">
+    <h2>📊 Today's Snapshot</h2>
+    <div class="card-body">
+      <div class="snapshot-grid" id="todaysSnapshotContent"></div>
+    </div>
+  </div>
+
+  <!-- F. AI Hub shortcuts -->
+  <div class="card" id="sec-aihub" data-screen="home">
+    <h2>✨ AI Hub</h2>
+    <div class="card-body">
+      <div class="aihub-list" id="aiHubShortcutsContent"></div>
+    </div>
+  </div>
+
+  <!-- G. Quick Actions -->
+  <div class="card" id="sec-quickactions" data-screen="home">
+    <h2>⚡ Quick Actions</h2>
+    <div class="card-body">
+      <div class="quickactions-grid" id="quickActionsContent"></div>
+    </div>
+  </div>
+
+  <!-- H. Progress Preview -->
+  <div class="card" id="sec-progresspreview" data-screen="home">
+    <div class="card-body">
+      <div class="progress-preview" id="progressPreviewContent"></div>
     </div>
   </div>
 
@@ -3731,7 +3869,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .opp-cta:active { transform: scale(0.98); }
     body.theme-light .opp-card { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
   </style>
-  <div class="card collapsible open" id="sec-opportunities">
+  <div class="card collapsible open" id="sec-opportunities" data-screen="copilot">
   <h2 onclick="toggleSection('sec-opportunities')">💡 Opportunity Center</h2>
     <div class="card-body">
       <div id="opportunityList"></div>
@@ -3749,7 +3887,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .wr-stat-value { font-size: 15px; font-weight: 700; color: #f1f5f9; margin-top: 2px; }
     body.theme-light .wr-mood-btn, body.theme-light .wr-stat { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
   </style>
-  <div class="card collapsible" id="sec-weeklyreview">
+  <div class="card collapsible" id="sec-weeklyreview" data-screen="copilot">
   <h2 onclick="toggleSection('sec-weeklyreview')">🗓️ Weekly Review</h2>
     <div class="card-body">
       <div id="weeklyReviewContent"></div>
@@ -3764,7 +3902,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .twin-inline-label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #94a3b8; flex: 1; min-width: 140px; }
     body.theme-light .twin-row input { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.1); }
   </style>
-  <div class="card collapsible" id="sec-twin">
+  <div class="card collapsible" id="sec-twin" data-screen="copilot">
   <h2 onclick="toggleSection('sec-twin')">🧬 Financial Twin</h2>
     <div class="card-body">
       <div id="financialTwinContent"></div>
@@ -3784,7 +3922,29 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     body.theme-light .sf-row { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
     @media (max-width: 480px) { .sf-row { grid-template-columns: 1fr; } }
   </style>
-  <div class="card collapsible" id="sec-smartforecasts">
+  <!-- GOALS SCREEN — segmented tab bar (Mobile UX redesign, MOBILE_REDESIGN.md Phase 4).
+       Groups the 6 Goals-screen sections into 3 tabs instead of one endless card list.
+       Reuses the generic .mg-subtabs mechanism shared with the More screen below. -->
+  <style>
+    .mg-subtabs { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding: 4px; margin: 0 0 14px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    body.theme-light .mg-subtabs { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
+    .mg-subtab-btn { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 8px 10px; border-radius: 10px; border: none; background: transparent;
+      color: #94a3b8; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
+      white-space: nowrap; }
+    .mg-subtab-btn .mt-icon { font-size: 16px; line-height: 1; }
+    .mg-subtab-btn.active { background: linear-gradient(135deg,#8b5cf6,#3b82f6); color: #fff; }
+    body.theme-light .mg-subtab-btn { color: #475569; }
+  </style>
+  <div class="mg-subtabs" data-screen="goals" id="goalsTabs" role="tablist" aria-label="Goals sections">
+    <button class="mg-subtab-btn active" role="tab" aria-selected="true" data-subtab-group="goals" data-subtab-target="goals" onclick="switchSubTab('goals','goals')"><span class="mt-icon">🎯</span>Goals &amp; Plan</button>
+    <button class="mg-subtab-btn" role="tab" aria-selected="false" data-subtab-group="goals" data-subtab-target="forecasts" onclick="switchSubTab('goals','forecasts')"><span class="mt-icon">🔮</span>Forecasts</button>
+    <button class="mg-subtab-btn" role="tab" aria-selected="false" data-subtab-group="goals" data-subtab-target="missions" onclick="switchSubTab('goals','missions')"><span class="mt-icon">🎮</span>Missions</button>
+  </div>
+
+  <div class="card collapsible" id="sec-smartforecasts" data-screen="goals" data-subtab-group="goals" data-subtab="forecasts">
   <h2 onclick="toggleSection('sec-smartforecasts')">🔮 Smart Forecasts</h2>
     <div class="card-body">
       <div id="smartForecastsContent"></div>
@@ -3805,7 +3965,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .tl-label { font-size: 13px; color: #f1f5f9; }
     body.theme-light .tl-label { color: #1e293b; }
   </style>
-  <div class="card collapsible" id="sec-timeline">
+  <div class="card collapsible" id="sec-timeline" data-screen="goals" data-subtab-group="goals" data-subtab="forecasts">
   <h2 onclick="toggleSection('sec-timeline')">🛤️ Financial Timeline</h2>
     <div class="card-body">
       <div id="financialTimelineContent"></div>
@@ -3829,7 +3989,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .gm-badge-title { font-size: 10px; color: #94a3b8; margin-top: 4px; line-height: 1.3; }
     body.theme-light .gm-badge { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
   </style>
-  <div class="card collapsible" id="sec-gamification">
+  <div class="card collapsible" id="sec-gamification" data-screen="goals" data-subtab-group="goals" data-subtab="missions">
   <h2 onclick="toggleSection('sec-gamification')">🎮 Missions &amp; Achievements</h2>
     <div class="card-body">
       <div id="gamificationContent"></div>
@@ -3837,7 +3997,16 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- MONTHLY FINANCIAL CEO REPORT -->
-  <div class="card collapsible" id="sec-ceoreport">
+  <!-- MORE SCREEN — segmented tab bar (Mobile UX redesign, MOBILE_REDESIGN.md Phase 4).
+       Groups the 6 More-screen sections into 4 tabs; reuses .mg-subtabs from Goals above. -->
+  <div class="mg-subtabs" data-screen="more" id="moreTabs" role="tablist" aria-label="More sections">
+    <button class="mg-subtab-btn active" role="tab" aria-selected="true" data-subtab-group="more" data-subtab-target="reports" onclick="switchSubTab('more','reports')"><span class="mt-icon">📊</span>Reports</button>
+    <button class="mg-subtab-btn" role="tab" aria-selected="false" data-subtab-group="more" data-subtab-target="family" onclick="switchSubTab('more','family')"><span class="mt-icon">👨‍👩‍👧</span>Family</button>
+    <button class="mg-subtab-btn" role="tab" aria-selected="false" data-subtab-group="more" data-subtab-target="notifications" onclick="switchSubTab('more','notifications')"><span class="mt-icon">🔔</span>Alerts</button>
+    <button class="mg-subtab-btn" role="tab" aria-selected="false" data-subtab-group="more" data-subtab-target="rewards" onclick="switchSubTab('more','rewards')"><span class="mt-icon">🎁</span>Rewards</button>
+  </div>
+
+  <div class="card collapsible" id="sec-ceoreport" data-screen="more" data-subtab-group="more" data-subtab="reports">
   <h2 onclick="toggleSection('sec-ceoreport')">📈 Monthly CEO Report</h2>
     <div class="card-body">
       <div id="ceoReportContent"></div>
@@ -3854,7 +4023,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .wm-fire-fill { background: linear-gradient(90deg, #8b5cf6, #3b82f6); height: 100%; transition: width 0.3s; }
     body.theme-light .wm-fire-bar { background: rgba(0,0,0,0.08); }
   </style>
-  <div class="card collapsible" id="sec-wealthmode">
+  <div class="card collapsible" id="sec-wealthmode" data-screen="goals" data-subtab-group="goals" data-subtab="forecasts">
   <h2 onclick="toggleSection('sec-wealthmode')">💎 Wealth Mode</h2>
     <div class="card-body">
       <div id="wealthModeContent"></div>
@@ -3862,7 +4031,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- FAMILY FINANCIAL HUB -->
-  <div class="card collapsible" id="sec-familyhub">
+  <div class="card collapsible" id="sec-familyhub" data-screen="more" data-subtab-group="more" data-subtab="family">
   <h2 onclick="toggleSection('sec-familyhub')">👨‍👩‍👧‍👦 Family Financial Hub</h2>
     <div class="card-body">
       <div id="familyHubContent"></div>
@@ -3891,7 +4060,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .ld-form-row input { background: rgba(6,9,20,0.5); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 8px; color: inherit; font-size: 13px; }
     body.theme-light .ld-form-row input { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.1); }
   </style>
-  <div class="card collapsible" id="sec-lifedecisions">
+  <div class="card collapsible" id="sec-lifedecisions" data-screen="copilot">
   <h2 onclick="toggleSection('sec-lifedecisions')">🧭 Life Decisions</h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:12px">Guided answers for big money decisions, using your real numbers instead of internet estimates.</p>
@@ -3899,36 +4068,30 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     </div>
   </div>
 
-  <div class="toolbar mg-toolbar">
-    <button class="mg-tool-btn" onclick="expandAll()" title="Expand All">⬇ <span class="mg-btn-label">Expand</span></button>
-    <button class="mg-tool-btn" onclick="collapseAll()" title="Collapse All">⬆ <span class="mg-btn-label">Collapse</span></button>
-    <button class="mg-tool-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">🌙 <span class="mg-btn-label">Theme</span></button>
-    <button class="mg-tool-btn privacy-btn" id="hideBalanceBtn" onclick="toggleHideBalances()" title="Hide Amounts">👁 <span class="mg-btn-label">Hide</span></button>
-    <button class="mg-tool-btn privacy-btn-backup" onclick="backupOrPremium()" id="backupToolbarBtn" title="Backup your data">☁ <span class="mg-btn-label">Backup</span></button>
-    <button class="mg-tool-btn privacy-btn-lock" onclick="lockOrPremium()" id="lockToolbarBtn" title="Lock App (Premium)">🔒 <span class="mg-btn-label">Lock</span></button>
-    <button class="mg-tool-btn pdf-export-btn" onclick="exportPDFReport()" title="PDF Report">📄 <span class="mg-btn-label">Report</span></button>
-    <button class="mg-tool-btn lang-btn" onclick="openLangPicker()" id="langToolbarBtn" title="Language">🌐 <span class="mg-btn-label" id="langLabel">EN</span></button>
-    <button class="mg-tool-btn mg-settings-btn" id="premiumToolbarBtn" onclick="openPremiumModal()" title="Settings & Premium">⚙ <span class="mg-btn-label">Settings</span></button>
-    <button class="mg-tool-btn" onclick="mgShowInstallModal()" title="Install as App">📱 <span class="mg-btn-label">Install</span></button>
-    <button class="mg-tool-btn mg-feedback-btn" onclick="openFeedbackModal()" title="Feedback">💬 <span class="mg-btn-label">Feedback</span></button>
+  <!-- MONEY SCREEN — segmented tab bar (Mobile UX redesign, MOBILE_REDESIGN.md Phase 3).
+       Groups the 14 Money-screen sections into 5 tabs instead of one endless card list. -->
+  <style>
+    .money-tabs { display: flex; gap: 4px; overflow-x: auto; -webkit-overflow-scrolling: touch;
+      padding: 4px; margin: 0 0 14px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 14px; }
+    body.theme-light .money-tabs { background: rgba(0,0,0,0.03); border-color: rgba(0,0,0,0.06); }
+    .money-tab-btn { flex: 1 0 auto; display: flex; flex-direction: column; align-items: center;
+      gap: 2px; padding: 8px 10px; border-radius: 10px; border: none; background: transparent;
+      color: #94a3b8; font-size: 11px; font-weight: 600; font-family: inherit; cursor: pointer;
+      white-space: nowrap; }
+    .money-tab-btn .mt-icon { font-size: 16px; line-height: 1; }
+    .money-tab-btn.active { background: linear-gradient(135deg,#8b5cf6,#3b82f6); color: #fff; }
+    body.theme-light .money-tab-btn { color: #475569; }
+  </style>
+  <div class="money-tabs" data-screen="money" id="moneyTabs" role="tablist" aria-label="Money sections">
+    <button class="money-tab-btn active" role="tab" aria-selected="true" data-money-tab-target="cashflow" onclick="switchMoneyTab('cashflow')"><span class="mt-icon">💰</span>Cash Flow</button>
+    <button class="money-tab-btn" role="tab" aria-selected="false" data-money-tab-target="debts" onclick="switchMoneyTab('debts')"><span class="mt-icon">🔥</span>Debts</button>
+    <button class="money-tab-btn" role="tab" aria-selected="false" data-money-tab-target="transactions" onclick="switchMoneyTab('transactions')"><span class="mt-icon">💳</span>Transactions</button>
+    <button class="money-tab-btn" role="tab" aria-selected="false" data-money-tab-target="bills" onclick="switchMoneyTab('bills')"><span class="mt-icon">📅</span>Bills &amp; Subs</button>
+    <button class="money-tab-btn" role="tab" aria-selected="false" data-money-tab-target="networth" onclick="switchMoneyTab('networth')"><span class="mt-icon">💼</span>Net Worth</button>
   </div>
 
-  <!-- 🎁 Limited-Time Offer Banner -->
-  <div class="offer-banner" id="offerBanner" onclick="openPremiumModal('🎁 FREE Premium')" style="display:none">
-    <div class="offer-icon">🎁</div>
-    <div class="offer-content">
-      <div class="offer-title" id="offerTitle">FREE for the first 10 signups!</div>
-      <div class="offer-subtitle" id="offerSubtitle">Sign up + message <strong>"free"</strong> to James → get Premium FREE for life. <strong>Tap for details.</strong></div>
-    </div>
-    <div class="offer-countdown" id="offerCountdown">
-      <div class="label">Spots left</div>
-      <div id="offerSpots">10</div>
-    </div>
-    <button class="offer-dismiss-btn" onclick="event.stopPropagation();dismissOffer()" title="Dismiss">×</button>
-  </div>
-
-
-  <div class="card collapsible open" id="sec-cashflow">
+  <div class="card collapsible open" id="sec-cashflow" data-screen="money" data-money-tab="cashflow">
     <h2 onclick="toggleSection('sec-cashflow')">📊 Monthly Cash Flow</h2>
     <div class="card-body">
     <div class="grid grid-3">
@@ -3947,7 +4110,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   <div id="ie-grid">
 
     <!-- INCOME CARD -->
-    <div class="card collapsible open" id="sec-income" style="border-top:3px solid #22c55e">
+    <div class="card collapsible open" id="sec-income" data-screen="money" data-money-tab="cashflow" style="border-top:3px solid #22c55e">
       <h2 onclick="toggleSection('sec-income')" style="padding:14px 18px 0;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px">
         💵 Income <span class="badge badge-green">Monthly</span>
         <button onclick="event.stopPropagation();mgOpenStatementUpload()" title="Import bank statement"
@@ -3960,7 +4123,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     </div>
 
     <!-- EXPENSES CARD -->
-    <div class="card collapsible open" id="sec-expenses" style="border-top:3px solid #60a5fa">
+    <div class="card collapsible open" id="sec-expenses" data-screen="money" data-money-tab="cashflow" style="border-top:3px solid #60a5fa">
       <h2 onclick="toggleSection('sec-expenses')" style="padding:14px 18px 0;font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px">
         🏠 Living Expenses <span class="badge badge-blue">Avg/mo</span>
         <button onclick="event.stopPropagation();mgOpenStatementUpload()" title="Import from screenshot, PDF or CSV"
@@ -3978,7 +4141,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   
 
   <!-- DEBT TRACKER -->
-  <div class="card collapsible open" id="sec-debts">
+  <div class="card collapsible open" id="sec-debts" data-screen="money" data-money-tab="debts">
     <h2 onclick="toggleSection('sec-debts')">🔥 Debts <span class="badge badge-red">Total: <span class="blur-money" id="totalDebt">—</span></span></h2>
     <div class="card-body">
     <div class="data-list" id="debtList"></div>
@@ -3993,7 +4156,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- PAYOFF FORECAST -->
-  <div class="card collapsible open" id="sec-forecast">
+  <div class="card collapsible open" id="sec-forecast" data-screen="more" data-subtab-group="more" data-subtab="reports">
     <h2 onclick="toggleSection('sec-forecast')">🎯 Payoff Forecast & Interest Cost</h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Based on each debt's APR and your current "Pay this month" amount.</p>
@@ -4022,7 +4185,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     body.theme-light .lab-tab { background: rgba(0,0,0,0.04); color: #374151; }
     body.theme-light .lab-input-row input[type="number"], body.theme-light .lab-input-row select { background: rgba(255,255,255,0.9); color: #0f172a; }
   </style>
-  <div class="card collapsible open" id="sec-whatif">
+  <div class="card collapsible open" id="sec-whatif" data-screen="copilot">
     <h2 onclick="toggleSection('sec-whatif')">🧪 Financial Decision Lab</h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Model a real decision before you make it — see the impact on your debt-free date, interest, and health score instantly.</p>
@@ -4120,7 +4283,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- SAVINGS GOALS -->
-  <div class="card collapsible open" id="sec-goals">
+  <div class="card collapsible open" id="sec-goals" data-screen="goals" data-subtab-group="goals" data-subtab="goals">
     <h2 onclick="toggleSection('sec-goals')" style="display:flex;align-items:center;gap:8px">💎 Savings Goals
       <button onclick="event.stopPropagation();mgOpenSmartImport('goals')" title="Import from screenshot or PDF"
         style="margin-left:auto;font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.12);color:#a5b4fc;cursor:pointer;font-weight:600">📁 Import</button>
@@ -4134,7 +4297,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- NET WORTH -->
-  <div class="card collapsible open" id="sec-networth">
+  <div class="card collapsible open" id="sec-networth" data-screen="money" data-money-tab="networth">
     <h2 onclick="toggleSection('sec-networth')">💼 Net Worth Tracker</h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Net Worth = Assets − Debts. Watch the number flip positive as you pay down.</p>
@@ -4165,7 +4328,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- BILL CALENDAR -->
-  <div class="card collapsible open" id="sec-calendar">
+  <div class="card collapsible open" id="sec-calendar" data-screen="money" data-money-tab="bills">
     <h2 onclick="toggleSection('sec-calendar')">📅 Upcoming Bills (next 30 days)</h2>
     <div class="card-body">
       <div id="calendarList"></div>
@@ -4173,7 +4336,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- SUBSCRIPTIONS TRACKER -->
-  <div class="card collapsible open" id="sec-subscriptions">
+  <div class="card collapsible open" id="sec-subscriptions" data-screen="money" data-money-tab="bills">
     <h2 onclick="toggleSection('sec-subscriptions')" style="display:flex;align-items:center;gap:8px">💸 Subscription Tracker <span class="badge badge-amber">PREMIUM</span>
       <button onclick="event.stopPropagation();mgOpenSmartImport('subscriptions')" title="Import from screenshot or PDF"
         style="margin-left:auto;font-size:11px;padding:3px 9px;border-radius:20px;border:1px solid rgba(99,102,241,0.4);background:rgba(99,102,241,0.12);color:#a5b4fc;cursor:pointer;font-weight:600">📁 Import</button>
@@ -4189,7 +4352,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- 📊 CHARTS -->
-  <div class="card collapsible open" id="sec-charts">
+  <div class="card collapsible open" id="sec-charts" data-screen="money" data-money-tab="networth">
     <h2 onclick="toggleSection('sec-charts')">📊 Visual Insights</h2>
     <div class="card-body">
       <div class="chart-tabs" id="chartTabs">
@@ -4206,7 +4369,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- 🏦 CSV BANK IMPORT (Premium) -->
-  <div class="card collapsible" id="sec-csv">
+  <div class="card collapsible" id="sec-csv" data-screen="money" data-money-tab="networth">
     <h2 onclick="toggleSection('sec-csv')">🏦 Import Bank Statement (CSV) <span class="badge badge-amber">PREMIUM</span></h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Upload your bank CSV to auto-import expenses. UAE banks supported: ENBD, ADCB, Mashreq, RAKBANK, FAB, ADIB, and generic format.</p>
@@ -4229,7 +4392,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- 🔔 NOTIFICATIONS -->
-  <div class="card collapsible" id="sec-notifications">
+  <div class="card collapsible" id="sec-notifications" data-screen="more" data-subtab-group="more" data-subtab="notifications">
     <h2 onclick="toggleSection('sec-notifications')">🔔 Reminders & Notifications</h2>
     <div class="card-body">
       <div id="notifPermissionContainer"></div>
@@ -4284,7 +4447,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- 👨‍👩‍👧 FAMILY SHARE -->
-  <div class="card collapsible" id="sec-family">
+  <div class="card collapsible" id="sec-family" data-screen="more" data-subtab-group="more" data-subtab="family">
     <h2 onclick="toggleSection('sec-family')">👨‍👩‍👧 Family / Couples Share <span class="badge badge-amber">PREMIUM</span></h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Share your tracker with your spouse/family member. Their copy stays in sync via encrypted export/import. 100% private — no servers, end-to-end encrypted with your shared password.</p>
@@ -4339,7 +4502,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- REFERRAL PROGRAM -->
-  <div class="card collapsible open" id="sec-referral">
+  <div class="card collapsible open" id="sec-referral" data-screen="more" data-subtab-group="more" data-subtab="rewards">
     <h2 onclick="toggleSection('sec-referral')">🎁 Invite Friends — Earn Premium</h2>
     <div class="card-body">
       <div id="referralContent">
@@ -4375,7 +4538,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   
 
   <!-- ALERTS (DYNAMIC) -->
-  <div class="card collapsible" id="sec-actions">
+  <div class="card collapsible" id="sec-actions" data-screen="copilot">
   <h2 onclick="toggleSection('sec-actions')">⚠️ Immediate Actions</h2>
     <div class="card-body">
     <div id="alertsList"></div>
@@ -4383,7 +4546,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- DEBT-FREE PLAN (DYNAMIC) -->
-  <div class="card collapsible" id="sec-plan">
+  <div class="card collapsible" id="sec-plan" data-screen="goals" data-subtab-group="goals" data-subtab="goals">
   <h2 onclick="toggleSection('sec-plan')">🎯 Debt-Free Plan</h2>
     <div class="card-body">
     <div id="planList"></div>
@@ -4404,7 +4567,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .optimizer-badge { font-size: 10px; padding: 2px 8px; border-radius: 10px; background: rgba(16,185,129,0.2); color: #34d399; font-weight: 700; }
     body.theme-light .optimizer-strategy { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
   </style>
-  <div class="card collapsible" id="sec-optimizer">
+  <div class="card collapsible" id="sec-optimizer" data-screen="money" data-money-tab="debts">
   <h2 onclick="toggleSection('sec-optimizer')">⚖️ Debt Optimizer</h2>
     <div class="card-body">
       <p style="font-size:12px;color:#94a3b8;margin-bottom:10px">Two proven strategies for deciding which debt to attack first — see exactly what each costs you.</p>
@@ -4417,7 +4580,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- BUDGET (DYNAMIC) -->
-  <div class="card collapsible" id="sec-budget">
+  <div class="card collapsible" id="sec-budget" data-screen="money" data-money-tab="cashflow">
   <h2 onclick="toggleSection('sec-budget')">📅 Monthly Budget</h2>
     <div class="card-body">
     <div class="grid grid-3" id="budgetGrid"></div>
@@ -4425,7 +4588,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- UTILIZATION (DYNAMIC) -->
-  <div class="card collapsible" id="sec-util">
+  <div class="card collapsible" id="sec-util" data-screen="money" data-money-tab="debts">
   <h2 onclick="toggleSection('sec-util')">📈 Card Utilization</h2>
     <div class="card-body">
     <div id="utilList"></div>
@@ -4434,7 +4597,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- TRANSACTIONS -->
-  <div class="card collapsible open" id="sec-transactions">
+  <div class="card collapsible open" id="sec-transactions" data-screen="money" data-money-tab="transactions">
   <h2 onclick="toggleSection('sec-transactions')">💳 Transactions <span class="badge badge-green" id="txn-count-badge">0</span></h2>
     <div class="card-body">
 
@@ -4516,7 +4679,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   </div>
 
   <!-- LOG -->
-  <div class="card collapsible" id="sec-log">
+  <div class="card collapsible" id="sec-log" data-screen="money" data-money-tab="transactions">
   <h2 onclick="toggleSection('sec-log')">📒 Monthly Log</h2>
     <div class="card-body">
     <div class="data-list" id="logList"></div>
@@ -4545,18 +4708,25 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
 
 
 <!-- FLOATING THEME TOGGLE -->
+<!-- Hidden, not removed, in the Mobile UX redesign (MOBILE_REDESIGN.md Phase 5) — this button
+     was a redundant second entry point for openThemePicker(), the exact same destination as
+     the toolbar's own "🌙 Theme" button, which is now globally reachable on every screen
+     (Phase 4 moved the toolbar to sit right under the header on all 5 tabs). Kept in the DOM,
+     display:none, since updateThemeButton() still safely no-ops on it via an `if (fab)` guard. -->
 <button id="floatingThemeBtn" onclick="openThemePicker()" title="Choose theme"
-  style="position:fixed;bottom:88px;right:16px;width:46px;height:46px;border-radius:50%;border:none;
+  style="display:none;position:fixed;bottom:88px;right:16px;width:46px;height:46px;border-radius:50%;border:none;
          background:rgba(30,41,59,0.92);backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,0.4);
-         font-size:20px;cursor:pointer;z-index:9998;display:flex;align-items:center;justify-content:center;
+         font-size:20px;cursor:pointer;z-index:9998;align-items:center;justify-content:center;
          transition:transform 0.15s,box-shadow 0.15s;border:1px solid rgba(255,255,255,0.12)"
   onmouseover="this.style.transform='scale(1.12)'"
   onmouseout="this.style.transform='scale(1)'">🌙</button>
 
 <!-- MONEYGLOW COPILOT (id's kept as "ai*" — deliberately unchanged, see REFACTORS.md Phase 4) -->
-<button class="ai-fab" id="aiFab" onclick="toggleAI()" title="MoneyGlow Copilot">
+<!-- Hidden, not removed, in the Mobile UX redesign (MOBILE_REDESIGN.md) — the Copilot bottom-nav
+     tab now serves this button's purpose. #aiNotifBadge itself moved onto that tab in Phase 5
+     (see the bottom-nav markup near the end of the document). -->
+<button class="ai-fab" id="aiFab" onclick="toggleAI()" title="MoneyGlow Copilot" style="display:none">
   <span id="aiFabIcon">🤖</span>
-  <span class="badge-notif" id="aiNotifBadge" style="display:none">!</span>
 </button>
 
 <!-- QUICK NAV (Phase 9) — fast jump to the product brief's 10 recommended sections
@@ -4575,7 +4745,10 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
   body.theme-light .quicknav-fab, body.theme-light .quicknav-menu { background: rgba(255,255,255,0.92); color: #0f172a; border-color: rgba(0,0,0,0.08); }
   body.theme-light .quicknav-menu button { color: #0f172a; }
 </style>
-<button class="quicknav-fab" id="quicknavFab" onclick="toggleQuickNav()" title="Jump to section">☰</button>
+<!-- Hidden, not removed, in the Mobile UX redesign (MOBILE_REDESIGN.md) — the 5-tab bottom nav
+     now covers "jump to a section" directly; QUICK_NAV_ITEMS/toggleQuickNav() stay intact and
+     unused rather than deleted, since removing them isn't necessary for this pass. -->
+<button class="quicknav-fab" id="quicknavFab" onclick="toggleQuickNav()" title="Jump to section" style="display:none">☰</button>
 <div class="quicknav-menu" id="quicknavMenu" style="display:none"></div>
 
 <div class="ai-panel" id="aiPanel">
@@ -5877,6 +6050,12 @@ function refreshAll(){
   renderPlan();
   renderTransactions();
   renderHero();
+  renderHomeGreeting();
+  renderTodaysMission();
+  renderTodaysSnapshot();
+  renderAIHubShortcuts();
+  renderQuickActions();
+  renderProgressPreview();
   renderOptimizer();
   renderOpportunityCenter();
   renderWeeklyReview();
@@ -6095,6 +6274,30 @@ const ACHIEVEMENT_DEFS = [
 // both of which read/write localStorage under these exact keys.
 const USAGE_STREAK_KEY = 'moneyglow_usage_streak';
 const ACHIEVEMENTS_KEY = 'moneyglow_achievements_unlocked';
+
+// Home screen redesign (Phase 2, MOBILE_REDESIGN.md) — same reason as everything else in
+// this block: renderHero() and computeTodaysMission() are both reached via refreshAll()
+// during the real bootstrap below, so anything they reference by name must already exist.
+const SCORE_FACTOR_ACTIONS = {
+  'Debt-to-income': 'Put any extra cash toward your highest-APR debt to shrink this ratio faster.',
+  'Savings rate': 'Trim one or two non-essential expense categories to grow your monthly surplus.',
+  'Credit utilization': 'Pay your credit cards down below 30% of their limit — even AED 200/month helps.',
+  'On-time payments': 'Bring overdue debts current — this factor recovers to 100 the moment nothing is overdue.',
+  'Emergency fund': 'Add to your Emergency Fund goal until it covers 3 months of essential expenses.',
+  'Goal progress': 'Contribute a fixed amount toward your savings goals each month, even a small one.',
+  'Net worth trend': 'Keep paying down debt and building savings — this factor updates as your history builds.'
+};
+const HOME_MISSION_META = {
+  noOverdue: { title: 'Clear your overdue debts', why: 'Overdue debts hurt your Health Score the most — clearing them recovers points immediately.', cta: 'Review debts', action: () => { switchScreen('money'); goToOpportunity('sec-debts'); } },
+  utilizationHealthy: { title: 'Bring card utilization under 30%', why: 'Keeping card balances under 30% of their limit is one of the fastest ways to raise your score.', cta: 'Review debts', action: () => { switchScreen('money'); goToOpportunity('sec-debts'); } },
+  emergencyStarted: { title: 'Grow your emergency fund', why: 'A funded emergency buffer protects you from needing new debt if something unexpected comes up.', cta: 'Add to emergency fund', action: () => { switchScreen('goals'); goToOpportunity('sec-goals'); } },
+  payDebt: { title: 'Log a debt payment this week', why: "Extra debt payments are a guaranteed, tax-free return equal to that debt's APR.", cta: 'Log a payment', action: () => { switchScreen('money'); goToOpportunity('sec-transactions'); } },
+  logTransaction: { title: "Log today's transactions", why: 'Logging transactions keeps your Weekly Review and Health Score accurate.', cta: 'Add a transaction', action: () => { switchScreen('money'); goToOpportunity('sec-transactions'); } },
+  setGoal: { title: 'Set your first savings goal', why: 'A savings goal gives your surplus somewhere real to go.', cta: 'Set a goal', action: () => { switchScreen('goals'); goToOpportunity('sec-goals'); } },
+  checkedIn: { title: 'Do your weekly check-in', why: "A quick check-in keeps your plan's tone matched to how you're actually feeling.", cta: 'Check in', action: () => { openCopilotScreen(); setTimeout(() => goToOpportunity('sec-weeklyreview'), 350); } },
+  triedDecisionLab: { title: 'Try the Financial Decision Lab', why: 'Run a real decision through the Decision Lab before you commit to it.', cta: 'Open Decision Lab', action: () => { openCopilotScreen(); } }
+};
+const HOME_MISSION_PRIORITY = ['noOverdue','utilizationHealthy','emergencyStarted','payDebt','logTransaction','setGoal','checkedIn','triedDecisionLab'];
 
 updateUsageStreak();
 renderAll();
@@ -6785,9 +6988,34 @@ function computeOpportunities(){
 function goToOpportunity(sectionId, labTab){
   const card = document.getElementById(sectionId);
   if (card) {
+    // Real bug found in Phase 7's full regression sweep: several Opportunity Center
+    // action buttons (e.g. "Review subscriptions", "View debt", "Review goals") call
+    // goToOpportunity() directly from the Copilot screen, jumping to a Money/Goals
+    // section without ever switching the active top-level screen — the target section
+    // would still switch to visible (since switchMoneyTab()/switchSubTab() below set its
+    // display directly), but underneath a bottom nav still highlighting "Copilot" and
+    // alongside Copilot's own sections, a broken mixed-screen state. Every *correct*
+    // existing caller already switches screens itself first (HOME_MISSION_META,
+    // openCopilotScreen() + setTimeout, Quick Actions), so this is a no-op for them —
+    // it only fires when a caller forgot to, fixing the bug at this single choke point
+    // for every current and future caller instead of patching each call site.
+    const targetScreen = card.getAttribute('data-screen');
+    if (targetScreen && document.body.getAttribute('data-active-screen') !== targetScreen && typeof switchScreen === 'function') {
+      switchScreen(targetScreen);
+    }
+    // Money-screen sections live behind one of 5 segmented tabs (MOBILE_REDESIGN.md
+    // Phase 3) — jump to the right tab first, or the target could be hidden and
+    // scrollIntoView would silently do nothing.
+    const moneyTab = card.getAttribute('data-money-tab');
+    if (moneyTab && typeof switchMoneyTab === 'function') switchMoneyTab(moneyTab);
+    // Goals/More sections use the generic sub-tab mechanism (MOBILE_REDESIGN.md Phase 4) —
+    // same reasoning as the Money-tab check above.
+    const subtabGroup = card.getAttribute('data-subtab-group');
+    const subtabTarget = card.getAttribute('data-subtab');
+    if (subtabGroup && subtabTarget && typeof switchSubTab === 'function') switchSubTab(subtabGroup, subtabTarget);
     card.classList.add('open');
     if (sectionId === 'sec-subscriptions' && typeof renderSubscriptions === 'function') renderSubscriptions();
-    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.scrollIntoView({ behavior: mgScrollBehavior(), block: 'start' });
   }
   if (labTab && typeof switchLabTab === 'function') setTimeout(() => switchLabTab(labTab), 300);
 }
@@ -6796,7 +7024,7 @@ function goToOpportunity(sectionId, labTab){
 // The product brief's 10-item recommended navigation, adapted to this app's real
 // anchors (single scrolling page, not a router) rather than a fabricated multi-page menu.
 const QUICK_NAV_ITEMS = [
-  { icon: '🏠', label: 'Home', action: () => window.scrollTo({ top: 0, behavior: 'smooth' }) },
+  { icon: '🏠', label: 'Home', action: () => window.scrollTo({ top: 0, behavior: mgScrollBehavior() }) },
   { icon: '🤖', label: 'MoneyGlow Copilot', action: () => { if (!document.getElementById('aiPanel').classList.contains('show')) toggleAI(); } },
   { icon: '🧪', label: 'Financial Decision Lab', action: () => goToOpportunity('sec-whatif') },
   { icon: '🧭', label: 'Life Decisions', action: () => goToOpportunity('sec-lifedecisions') },
@@ -8308,6 +8536,10 @@ function computeHealthScore(){
   };
 }
 
+// Financial Health Hero (Home spec section B) — score, status, top priority, debt-free
+// date, risk level only. Cash-flow numbers (income/outflow/free cash) deliberately live in
+// Today's Snapshot instead — the spec is explicit that these two must not repeat each
+// other on the same screen.
 function renderHero(){
   const ring = document.getElementById('heroScoreRing');
   if (!ring) return;
@@ -8315,43 +8547,196 @@ function renderHero(){
   const h = computeHealthScore();
   document.getElementById('heroScoreValue').textContent = h.score;
   const deltaTxt = h.scoreDelta === null ? '' : h.scoreDelta === 0 ? ' (no change)' : (h.scoreDelta > 0 ? ` (+${h.scoreDelta})` : ` (${h.scoreDelta})`);
-  document.getElementById('heroScoreCaption').textContent = 'Financial Health: ' + h.band + deltaTxt;
+  document.getElementById('heroScoreCaption').textContent = h.band + deltaTxt;
   ring.style.setProperty('--hero-score-pct', h.score);
   ring.style.setProperty('--hero-score-color', h.color);
 
-  document.getElementById('heroCashIn').textContent = 'AED ' + fmtShort(h.inc);
-  document.getElementById('heroCashOut').textContent = 'AED ' + fmtShort(h.inc - h.surplus);
-  const freeEl = document.getElementById('heroFreeCash');
-  freeEl.textContent = 'AED ' + fmtShort(h.surplus);
-  freeEl.className = 'value blur-money ' + (h.surplus >= 0 ? 'positive' : 'negative');
+  const topActions = scoreImprovementActions(h);
+  const priorityEl = document.getElementById('heroTopPriority');
+  if (priorityEl) priorityEl.textContent = topActions[0] ? topActions[0].label : 'Nothing urgent';
 
   const baseline = simulateAvalanche(0);
-  document.getElementById('heroDebtFreeDate').textContent = baseline.debtFree
+  const dateEl = document.getElementById('heroDebtFreeDate');
+  if (dateEl) dateEl.textContent = baseline.debtFree
     ? (baseline.months === 0 ? 'Debt-free! 🎉' : fmtDate(baseline.payoffDate))
     : 'Raise payments';
 
-  const extra = Math.max(0, h.surplus);
-  const savingsEl = document.getElementById('heroInterestSavings');
-  if (extra > 0 && baseline.months > 0) {
-    const boosted = simulateAvalanche(extra);
-    const saved = Math.max(0, baseline.totalInterest - boosted.totalInterest);
-    savingsEl.textContent = 'AED ' + fmt(saved) + ' if you apply your free cash';
-  } else {
-    savingsEl.textContent = baseline.months === 0 ? 'You are debt-free' : 'Fix your budget first';
+  // Risk level: a plain-language read of the same band the score already produces —
+  // not a second, independently-invented number.
+  const riskEl = document.getElementById('heroRiskLevel');
+  if (riskEl) {
+    let riskLabel, riskClass;
+    if (h.score < 40) { riskLabel = 'High'; riskClass = 'risk-high'; }
+    else if (h.score < 70) { riskLabel = 'Medium'; riskClass = 'risk-medium'; }
+    else { riskLabel = 'Low'; riskClass = 'risk-low'; }
+    riskEl.textContent = riskLabel;
+    riskEl.className = 'health-hero-risk ' + riskClass;
   }
 }
 
-// Plain-language "what to do about it" per factor, used to build the 3-actions list below.
-// Kept as static copy (not AI-generated) so it's free, instant, and always available offline.
-const SCORE_FACTOR_ACTIONS = {
-  'Debt-to-income': 'Put any extra cash toward your highest-APR debt to shrink this ratio faster.',
-  'Savings rate': 'Trim one or two non-essential expense categories to grow your monthly surplus.',
-  'Credit utilization': 'Pay your credit cards down below 30% of their limit — even AED 200/month helps.',
-  'On-time payments': 'Bring overdue debts current — this factor recovers to 100 the moment nothing is overdue.',
-  'Emergency fund': 'Add to your Emergency Fund goal until it covers 3 months of essential expenses.',
-  'Goal progress': 'Contribute a fixed amount toward your savings goals each month, even a small one.',
-  'Net worth trend': 'Keep paying down debt and building savings — this factor updates as your history builds.'
-};
+// A. Personalized greeting — real local time, stored name, one real-data sentence.
+function renderHomeGreeting(){
+  const el = document.getElementById('homeGreeting');
+  if (!el) return;
+  const user = getCurrentUser();
+  const firstName = user && user.name ? user.name.trim().split(/\s+/)[0] : '';
+  const hour = new Date().getHours();
+  const timeGreeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+  const greetingLine = firstName ? `${timeGreeting}, ${escapeHtml(firstName)} 👋` : `${timeGreeting} 👋`;
+
+  const h = computeHealthScore();
+  let sentence;
+  if (h.surplus < 0) {
+    sentence = `You are currently spending AED ${fmt(Math.abs(h.surplus))} more than you earn each month.`;
+  } else if (h.scoreDelta !== null && h.scoreDelta > 0) {
+    sentence = `You improved your financial health by ${h.scoreDelta} point${h.scoreDelta===1?'':'s'} recently.`;
+  } else if (h.surplus > 0) {
+    sentence = `You have AED ${fmt(h.surplus)} in free cash this month to put to work.`;
+  } else {
+    sentence = `Your income and spending are balanced this month.`;
+  }
+
+  el.innerHTML = `<h2>${greetingLine}</h2><p>${sentence}</p>`;
+}
+
+// C. Today's Mission — surfaces the highest-priority INCOMPLETE mission from Phase 15's
+// real, live-checked Missions system (see computeMissions()) rather than inventing a
+// separate generator. Completion is always auto-detected from real data, exactly like the
+// Missions & Achievements card — there's no manual "mark complete" button here, since a
+// self-reported completion could drift from the truth. The action button instead navigates
+// to wherever actually completes the mission.
+// (HOME_MISSION_META/HOME_MISSION_PRIORITY are declared before the real bootstrap call —
+// same TDZ lesson as SCORE_FACTOR_ACTIONS just above and every other instance documented
+// in REFACTORS.md/MOBILE_REDESIGN.md: renderHero() below reaches computeTodaysMission()
+// via refreshAll() during the synchronous bootstrap, before this point in the file would
+// otherwise have executed.)
+function computeTodaysMission(){
+  const missions = computeMissions(); // real, live-checked — see Phase 15
+  const incomplete = missions.filter(m => !m.done);
+  if (incomplete.length === 0) {
+    return { title: "Log today's transactions", why: "You're on top of everything MoneyGlow tracks — logging today's activity keeps it that way.", cta: 'Add a transaction', action: () => { switchScreen('money'); goToOpportunity('sec-transactions'); }, hasProgress: false };
+  }
+  let chosenId = HOME_MISSION_PRIORITY.find(id => incomplete.some(m => m.id === id));
+  if (!chosenId) chosenId = incomplete[0].id;
+  const meta = HOME_MISSION_META[chosenId] || { title: 'Complete your financial setup', why: 'A few more real numbers make every MoneyGlow recommendation more accurate.', cta: 'Get started', action: () => switchScreen('money') };
+
+  let hasProgress = false, progressPct = 0, progressLabel = '';
+  if (chosenId === 'emergencyStarted') {
+    const saved = _emergencyFundSaved();
+    const target = _monthlyLiving() * 3;
+    if (target > 0) {
+      hasProgress = true;
+      progressPct = Math.min(100, (saved / target) * 100);
+      progressLabel = `AED ${fmt(saved)} / AED ${fmt(target)}`;
+    }
+  }
+
+  return { title: meta.title, why: meta.why, cta: meta.cta, action: meta.action, hasProgress, progressPct, progressLabel };
+}
+
+function renderTodaysMission(){
+  const el = document.getElementById('todaysMissionContent');
+  if (!el) return;
+  const m = computeTodaysMission();
+  window.__homeMissionAction = m.action; // avoid inline-onclick closures over non-serializable functions
+  el.innerHTML = `
+    <div class="mission-title">${escapeHtml(m.title)}</div>
+    <div class="mission-why">${escapeHtml(m.why)}</div>
+    ${m.hasProgress ? `
+      <div class="mission-progress-bar"><div class="mission-progress-fill" style="width:${m.progressPct}%"></div></div>
+      <div class="mission-progress-label">${escapeHtml(m.progressLabel)}</div>
+    ` : ''}
+    <button class="mission-cta" onclick="window.__homeMissionAction && window.__homeMissionAction()">${escapeHtml(m.cta)} →</button>
+  `;
+}
+
+// E. Today's Snapshot — the ONLY place Income/Outflow/Free Cash/Debt appear together on Home.
+function renderTodaysSnapshot(){
+  const el = document.getElementById('todaysSnapshotContent');
+  if (!el) return;
+  const inc = _monthlyIncome();
+  const living = _monthlyLiving();
+  const debtPay = _monthlyDebtPayments();
+  const outflow = living + debtPay;
+  const free = inc - outflow;
+  const totalDebt = _totalDebt();
+  const tile = (label, value, cls) => `<div class="snapshot-tile"><div class="label">${label}</div><div class="value ${cls||''}">${value}</div></div>`;
+  el.innerHTML =
+    tile('Income', 'AED ' + fmtShort(inc)) +
+    tile('Outflow', 'AED ' + fmtShort(outflow)) +
+    tile('Free Cash', (free>=0?'':'-') + 'AED ' + fmtShort(Math.abs(free)), free>=0?'positive':'negative') +
+    tile('Debt', 'AED ' + fmtShort(totalDebt));
+}
+
+// F. AI Hub Shortcuts — real one-line previews, not the full content of each feature.
+function renderAIHubShortcuts(){
+  const el = document.getElementById('aiHubShortcutsContent');
+  if (!el) return;
+  const opportunities = computeOpportunities();
+  const wr = computeWeeklyReview();
+  const shortcuts = [
+    { icon: '🧭', name: 'Life Decisions', preview: 'Run a real decision through the numbers before you commit.', target: 'sec-lifedecisions' },
+    { icon: '👥', name: 'Financial Twin', preview: 'See where your current plan could lead.', target: 'sec-twin' },
+    { icon: '💡', name: 'Opportunities', preview: opportunities.length > 0 ? `${opportunities.length} possible improvement${opportunities.length===1?'':'s'} found.` : 'No urgent opportunities right now.', target: 'sec-opportunities' },
+    { icon: '📅', name: 'Weekly Review', preview: wr.hasHistory ? 'Your latest review is ready.' : 'Check back after a few days of history.', target: 'sec-weeklyreview' }
+  ];
+  el.innerHTML = shortcuts.map(s => `
+    <button class="aihub-shortcut" onclick="openCopilotScreen();setTimeout(()=>goToOpportunity('${s.target}'),350)">
+      <span class="icon">${s.icon}</span>
+      <span class="text"><div class="name">${escapeHtml(s.name)}</div><div class="preview">${escapeHtml(s.preview)}</div></span>
+      <span class="chevron">›</span>
+    </button>
+  `).join('');
+}
+
+// G. Quick Actions — max 4 on Home per spec; the rest live under More.
+function quickAction(type){
+  if (type === 'income') { switchScreen('money'); addIncomeRow(); goToOpportunity('sec-income'); }
+  else if (type === 'expense') { switchScreen('money'); addExpenseRow(); goToOpportunity('sec-expenses'); }
+  else if (type === 'debt') { switchScreen('money'); addDebtRow(); goToOpportunity('sec-debts'); }
+  else if (type === 'copilot') { openCopilotScreen(); }
+}
+function renderQuickActions(){
+  const el = document.getElementById('quickActionsContent');
+  if (!el) return;
+  const actions = [
+    { icon: '💵', label: 'Add Income', type: 'income' },
+    { icon: '💸', label: 'Add Expense', type: 'expense' },
+    { icon: '🔥', label: 'Add Debt', type: 'debt' },
+    { icon: '✨', label: 'Ask Copilot', type: 'copilot' }
+  ];
+  el.innerHTML = actions.map(a => `
+    <button class="quickaction-btn" onclick="quickAction('${a.type}')">
+      <span class="icon">${a.icon}</span><span class="label">${escapeHtml(a.label)}</span>
+    </button>
+  `).join('');
+}
+
+// H. Progress Preview — exactly one, per spec. Emergency fund if not yet funded (a concrete,
+// universally-relevant number), otherwise this week's mission completion as a fallback that's
+// always available once the fund itself is done.
+function renderProgressPreview(){
+  const el = document.getElementById('progressPreviewContent');
+  if (!el) return;
+  const saved = _emergencyFundSaved();
+  const target = _monthlyLiving() * 3;
+  let pct, title, sub;
+  if (target > 0 && saved < target) {
+    pct = Math.min(100, (saved / target) * 100);
+    title = 'Emergency Fund';
+    sub = `AED ${fmt(saved)} of AED ${fmt(target)} (${pct.toFixed(0)}%)`;
+  } else {
+    const missions = computeMissions();
+    const done = missions.filter(m => m.done).length;
+    pct = missions.length > 0 ? (done / missions.length) * 100 : 0;
+    title = "This Week's Missions";
+    sub = `${done} of ${missions.length} completed`;
+  }
+  el.innerHTML = `
+    <div class="progress-preview-ring" style="--pp-pct:${pct}"><div class="progress-preview-inner">${pct.toFixed(0)}%</div></div>
+    <div class="progress-preview-text"><div class="progress-preview-title">${title}</div><div class="progress-preview-sub">${sub}</div></div>
+  `;
+}
 
 // Ranks factors by how many score points are realistically recoverable (weight × gap),
 // assuming a partial (not perfect) fix — 60% of the gap — so the estimate stays honest.
@@ -8455,6 +8840,10 @@ async function generateAIPlan(){
 function renderGoals(){
   const list = document.getElementById('goalsList');
   if (!list) return;
+  if (!data.goals || data.goals.length === 0) {
+    list.innerHTML = '<div class="ok" style="padding:20px;text-align:center"><strong>🎯 No savings goals yet</strong><br><small>Set one below — even a small target (like a AED 2,000 emergency buffer) gives your surplus somewhere to go.</small></div>';
+    return;
+  }
   list.innerHTML = data.goals.map((g, i) => {
     const pct = g.target > 0 ? Math.min(100, (g.current/g.target)*100) : 0;
     return `
@@ -8958,6 +9347,11 @@ async function hashPin(pin){
 let pinMode = 'unlock'; // unlock | setup-new | setup-confirm
 let enteredPin = '';
 let newPinAttempt = '';
+// Raw PIN digits, cached in memory ONLY for the current unlocked session — never
+// persisted anywhere. Exists solely so the Bring-Your-Own AI API key can be encrypted/
+// decrypted at rest using the PIN, without touching the actual unlock verification logic
+// above (which compares hashes and is untouched by this). Cleared on every re-lock.
+let _sessionPin = null;
 let pinMaxLength = 6;
 let failedAttempts = 0;
 
@@ -9016,7 +9410,9 @@ async function submitPin(){
     if (pinHash === stored) {
       // success
       failedAttempts = 0;
+      _sessionPin = enteredPin;
       hideLockScreen();
+      migrateOrDecryptApiKey();
     } else {
       failedAttempts++;
       showLockError('❌ Wrong PIN (attempt ' + failedAttempts + ')');
@@ -9043,8 +9439,10 @@ async function submitPin(){
   } else if (pinMode === 'setup-confirm') {
     if (enteredPin === newPinAttempt) {
       localStorage.setItem('financeTracker_pin', pinHash);
+      _sessionPin = enteredPin;
       alert('✅ PIN set successfully! Your tracker is now locked when you close or refresh the page.');
       hideLockScreen();
+      migrateOrDecryptApiKey();
     } else {
       showLockError('❌ PINs don\'t match. Start over.');
       flashDotsError();
@@ -9071,6 +9469,7 @@ function showLockScreen(mode){
   pinMode = mode;
   enteredPin = '';
   newPinAttempt = '';
+  _sessionPin = null; // re-locking forgets the cached PIN — the encrypted AI key stays encrypted until unlocked again
   if (mode === 'unlock') {
     document.getElementById('lockIcon').textContent = '🔒';
     document.getElementById('lockTitle').textContent = 'Enter PIN';
@@ -9105,8 +9504,19 @@ function lockApp(){
   }
 }
 
-function resetPinFlow(){
+async function resetPinFlow(){
   if (!confirm('Reset your PIN?\n\nThis will remove the current PIN. Your tracker data is NOT deleted.')) return;
+  // The PIN is about to stop existing — decrypt the AI key back to plaintext first, or it
+  // would become permanently unrecoverable (no PIN left to derive the decryption key from).
+  if (typeof aiSettings !== 'undefined' && aiSettings.apiKeyEncrypted && _sessionPin) {
+    try {
+      aiSettings.apiKey = await decryptData(aiSettings.apiKeyEncrypted, _sessionPin);
+      aiSettings.apiKeyEncrypted = null;
+      localStorage.setItem('financeTracker_aiSettings', JSON.stringify({
+        provider: aiSettings.provider, model: aiSettings.model, apiKey: aiSettings.apiKey
+      }));
+    } catch(e) { console.warn('Could not migrate AI API key back to plaintext on PIN removal:', e); }
+  }
   localStorage.removeItem('financeTracker_pin');
   hideLockScreen();
   alert('PIN removed. App is now unlocked. Use the 🔒 Lock button to set a new one.');
@@ -9189,6 +9599,88 @@ async function decryptData(b64, password){
   );
   const pt = await crypto.subtle.decrypt({name:'AES-GCM', iv}, key, ct);
   return new TextDecoder().decode(pt);
+}
+
+// ---------- BYO AI API KEY ENCRYPTION AT REST ----------
+// Reuses encryptData()/decryptData() above (the same AES-256-GCM + PBKDF2 already trusted
+// for encrypted backups) keyed by the user's real PIN digits — never a new secret to
+// remember. Deliberately does NOT touch the PIN verification logic in submitPin() above;
+// this only ever reads the already-verified raw PIN via _sessionPin after the fact.
+//
+// Biometric (Face ID/Touch ID) unlock is a real wrinkle: it proves identity via WebAuthn,
+// which yields no shared secret usable as an encryption key, so a biometric-only unlock
+// never populates _sessionPin. getSessionPinForApiKey() handles that gap with a one-time,
+// on-demand PIN prompt — asked only the first time the encrypted key is actually needed,
+// not on every unlock, so biometric users keep their fast unlock the rest of the time.
+async function getSessionPinForApiKey(){
+  if (_sessionPin) return _sessionPin;
+  const stored = localStorage.getItem('financeTracker_pin');
+  if (!stored) return null; // no PIN set at all — nothing to derive a key from
+  const attempt = prompt('Enter your PIN to unlock your saved AI API key:');
+  if (!attempt) return null;
+  const hash = await hashPin(attempt);
+  if (hash !== stored) { alert('❌ Wrong PIN.'); return null; }
+  _sessionPin = attempt;
+  return _sessionPin;
+}
+
+// Called after every successful PIN unlock/setup. Two jobs, both no-ops most of the time:
+// (1) decrypt an already-encrypted key into memory so this session's AI chat can use it,
+// (2) one-time migration — if an existing plaintext key predates the user's PIN, encrypt
+// it now, using the PIN they just proved they know, with zero extra prompts.
+async function migrateOrDecryptApiKey(){
+  if (typeof aiSettings === 'undefined' || !_sessionPin) return;
+  try {
+    if (aiSettings.apiKeyEncrypted && !aiSettings.apiKey) {
+      aiSettings.apiKey = await decryptData(aiSettings.apiKeyEncrypted, _sessionPin);
+      if (typeof refreshAIUI === 'function') refreshAIUI();
+    } else if (aiSettings.apiKey && !aiSettings.apiKeyEncrypted) {
+      await persistAISettings();
+    }
+  } catch(e) {
+    console.warn('Could not unlock saved AI API key with this PIN:', e);
+  }
+}
+
+// Ensures aiSettings.apiKey is usable before anything tries to read it — decrypting from
+// aiSettings.apiKeyEncrypted if needed, prompting for the PIN only if a biometric-only
+// unlock left it undecrypted. Safe to call liberally; it's a fast no-op once decrypted.
+async function ensureApiKeyDecrypted(){
+  if (aiSettings.apiKey || !aiSettings.apiKeyEncrypted) return;
+  const pin = await getSessionPinForApiKey();
+  if (!pin) return; // user cancelled or entered the wrong PIN — caller falls back to offline mode
+  try {
+    aiSettings.apiKey = await decryptData(aiSettings.apiKeyEncrypted, pin);
+  } catch(e) {
+    console.warn('Failed to decrypt saved AI API key:', e);
+  }
+}
+
+// The one save path for aiSettings. When a PIN is set, encrypts the key at rest instead of
+// storing it in plain localStorage — the actual fix for the gap documented in the Trust
+// Center's AI Transparency section. Without a PIN, behavior is unchanged (plaintext, same
+// as every other local-only setting in this app).
+async function persistAISettings(){
+  const hasPin = !!localStorage.getItem('financeTracker_pin');
+  if (hasPin && aiSettings.apiKey) {
+    const pin = await getSessionPinForApiKey();
+    if (pin) {
+      const apiKeyEncrypted = await encryptData(aiSettings.apiKey, pin);
+      aiSettings.apiKeyEncrypted = apiKeyEncrypted; // keep the in-memory object in sync — resetPinFlow() and
+                                                     // migrateOrDecryptApiKey() both check this field directly
+      localStorage.setItem('financeTracker_aiSettings', JSON.stringify({
+        provider: aiSettings.provider, model: aiSettings.model, apiKeyEncrypted
+      }));
+      return;
+    }
+    // Couldn't get the PIN (user cancelled the prompt) — fall back to plaintext rather
+    // than silently discarding the key they just typed. Will migrate to encrypted on the
+    // next successful unlock via migrateOrDecryptApiKey().
+  }
+  aiSettings.apiKeyEncrypted = null;
+  localStorage.setItem('financeTracker_aiSettings', JSON.stringify({
+    provider: aiSettings.provider, model: aiSettings.model, apiKey: aiSettings.apiKey
+  }));
 }
 
 function openBackupModal(){
@@ -9529,13 +10021,14 @@ function toggleAI(){
   }
 }
 
-function toggleAISettings(){
+async function toggleAISettings(){
   const settings = document.getElementById('aiSettings');
   const isOpen = settings.classList.toggle('show');
   document.getElementById('aiMessages').style.display = isOpen ? 'none' : 'flex';
   document.getElementById('aiSuggestions').style.display = isOpen ? 'none' : 'flex';
   document.querySelector('.ai-input-row').style.display = isOpen ? 'none' : 'flex';
   if (isOpen) {
+    await ensureApiKeyDecrypted();
     document.getElementById('aiProvider').value = aiSettings.provider;
     document.getElementById('aiApiKey').value = aiSettings.apiKey;
     renderAIMemoryList();
@@ -9545,10 +10038,11 @@ function toggleAISettings(){
 
 function onAIProviderChange(){}
 
-function saveAISettings(){
+async function saveAISettings(){
   aiSettings.provider = document.getElementById('aiProvider').value;
   aiSettings.apiKey = document.getElementById('aiApiKey').value.trim();
-  localStorage.setItem('financeTracker_aiSettings', JSON.stringify(aiSettings));
+  aiSettings.apiKeyEncrypted = null; // superseded by whatever was just typed — persistAISettings() re-encrypts if a PIN is set
+  await persistAISettings();
   refreshAIUI();
   toggleAISettings();
   addAIMessage('assistant', aiSettings.provider === 'none'
@@ -9647,6 +10141,8 @@ async function sendAIMessage(){
   const input = document.getElementById('aiInput');
   const text = input.value.trim();
   if (!text) return;
+
+  await ensureApiKeyDecrypted();
 
   addAIMessage('user', escapeHtml(text));
   input.value = '';
@@ -10291,10 +10787,10 @@ function openNudgeAction(){
     setTimeout(() => useSuggestion('🔍 Scan for issues'), 300);
   } else if (currentNudgeAction === 'open-actions') {
     document.getElementById('sec-actions').classList.add('open');
-    document.getElementById('sec-actions').scrollIntoView({behavior:'smooth'});
+    document.getElementById('sec-actions').scrollIntoView({behavior:mgScrollBehavior()});
   } else if (currentNudgeAction === 'open-calendar') {
     document.getElementById('sec-calendar').classList.add('open');
-    document.getElementById('sec-calendar').scrollIntoView({behavior:'smooth'});
+    document.getElementById('sec-calendar').scrollIntoView({behavior:mgScrollBehavior()});
   } else if (currentNudgeAction === 'open-premium') {
     openPremiumModal();
   }
@@ -12060,7 +12556,7 @@ const TC_CONTENT = {
       <li>Is typed by you and stored only in your browser's local storage — it never appears in this app's source code.</li>
       <li>Is sent only in direct requests to the provider you selected — never logged by MoneyGlow, never sent anywhere else.</li>
       <li>Can be removed at any time from AI settings.</li>
-      <li>Is stored in plain local browser storage today, not independently encrypted — protected by your browser's same-origin isolation (other websites can't read it), but not by a separate passphrase yet. Don't reuse a sensitive password as your API key, and treat your device's own login/lock as the real boundary for now.</li>
+      <li>Is encrypted at rest (AES-256-GCM) using your PIN if you've set one — the same encryption already used for backups, so there's no separate passphrase to remember. Without a PIN set, it's stored in plain local browser storage, protected only by your browser's same-origin isolation (other websites can't read it). If you unlock with Face ID/Touch ID instead of typing your PIN, you may be asked for your PIN once to unlock the saved key — WebAuthn proves it's you, but doesn't hand back a secret that can decrypt anything.</li>
     </ul>
     <p>You're responsible for any usage charges your chosen provider bills you directly — MoneyGlow does not mark up or resell AI usage.</p>
     <h3>When AI is unavailable</h3>
@@ -12700,7 +13196,7 @@ function showTourStep(){
   }
 
   // Scroll into view
-  target.scrollIntoView({behavior: 'smooth', block: 'center', inline: 'center'});
+  target.scrollIntoView({behavior: mgScrollBehavior(), block: 'center', inline: 'center'});
 
   setTimeout(() => {
     const rect = target.getBoundingClientRect();
@@ -18532,7 +19028,260 @@ loadLocalAdminData();
   };
 })();
 
+// mgScrollBehavior() — Mobile UX redesign, Phase 6 (MOBILE_REDESIGN.md). The CSS
+// reduced-motion kill-switch doesn't cover scrollIntoView()/scrollTo() calls that pass
+// an explicit behavior:'smooth' option (inline JS options win over CSS scroll-behavior),
+// so every such call site asks this instead of hardcoding 'smooth'.
+function mgScrollBehavior(){
+  try {
+    return (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
+  } catch(e) { return 'smooth'; }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BOTTOM NAVIGATION — screen switching (Mobile UX redesign, Phase 1)
+// ═══════════════════════════════════════════════════════════════
+// Every existing section already has a data-screen attribute (see
+// MOBILE_REDESIGN.md's audit table) naming which of the 5 tabs it belongs to.
+// Switching screens is pure show/hide — nothing is recalculated, nothing is
+// physically moved in the DOM, so every existing render function, event
+// handler, and Premium gate keeps working exactly as before; only which
+// section is visible changes. Global chrome (header, modals, lock screen,
+// Control/Trust Center overlays) has no data-screen attribute, so it's
+// untouched by this and stays available regardless of the active tab.
+const MG_SCREEN_KEY = 'moneyglow_active_screen';
+const MG_SCREENS = ['home', 'copilot', 'money', 'goals', 'more'];
+
+function switchScreen(name){
+  if (MG_SCREENS.indexOf(name) === -1) name = 'home';
+  document.querySelectorAll('[data-screen]').forEach(el => {
+    el.style.display = (el.getAttribute('data-screen') === name) ? '' : 'none';
+  });
+  document.querySelectorAll('.bottom-nav-item').forEach(btn => {
+    const isActive = btn.getAttribute('data-screen-target') === name;
+    btn.classList.toggle('active', isActive);
+    if (isActive) btn.setAttribute('aria-current', 'page'); else btn.removeAttribute('aria-current');
+  });
+  try { localStorage.setItem(MG_SCREEN_KEY, name); } catch(e){}
+  window.scrollTo({ top: 0, behavior: 'instant' in window ? 'instant' : 'auto' });
+  document.body.setAttribute('data-active-screen', name);
+  // The Money screen's own sections carry a SECOND attribute, data-money-tab, splitting
+  // its 14 sections into 5 segmented tabs (see MOBILE_REDESIGN.md Phase 3). switchScreen
+  // just made all data-screen="money" elements visible again, which would undo whatever
+  // money-tab was previously hidden — so re-apply the saved/active money tab right after.
+  if (name === 'money') applyMoneyTabVisibility(getSavedMoneyTab());
+  // Goals and More use the generic sub-tab mechanism below (Phase 4) — same reasoning:
+  // re-apply whichever sub-tab was last active for that screen right after switchScreen
+  // makes all its data-screen elements visible again.
+  if (MG_SUBTAB_CONFIG[name]) switchSubTab(name, getSavedSubTab(name), /*persist*/ false);
+}
+
+// ---------- MONEY SCREEN — segmented tabs (Mobile UX redesign Phase 3) ----------
+const MG_MONEY_TAB_KEY = 'moneyglow_money_tab';
+const MG_MONEY_TABS = ['cashflow', 'debts', 'transactions', 'bills', 'networth'];
+
+function getSavedMoneyTab(){
+  let tab = 'cashflow';
+  try {
+    const saved = localStorage.getItem(MG_MONEY_TAB_KEY);
+    if (saved && MG_MONEY_TABS.indexOf(saved) !== -1) tab = saved;
+  } catch(e){}
+  return tab;
+}
+
+function applyMoneyTabVisibility(tab){
+  if (MG_MONEY_TABS.indexOf(tab) === -1) tab = 'cashflow';
+  document.querySelectorAll('[data-money-tab]').forEach(el => {
+    el.style.display = (el.getAttribute('data-money-tab') === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('.money-tab-btn').forEach(btn => {
+    const isActive = btn.getAttribute('data-money-tab-target') === tab;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+}
+
+function switchMoneyTab(tab){
+  applyMoneyTabVisibility(tab);
+  try { localStorage.setItem(MG_MONEY_TAB_KEY, tab); } catch(e){}
+}
+
+// ---------- GOALS & MORE — generic segmented sub-tabs (Mobile UX redesign Phase 4) ----------
+// Same idea as the Money-specific tabs above, generalized so Goals and More (built in the
+// same phase) share one mechanism instead of two more near-copies of switchMoneyTab. Each
+// screen's sections carry data-subtab-group="<screen>" + data-subtab="<tab>"; each screen's
+// tab buttons carry the matching data-subtab-group + data-subtab-target.
+const MG_SUBTAB_CONFIG = {
+  goals: { tabs: ['goals', 'forecasts', 'missions'], fallback: 'goals' },
+  more:  { tabs: ['reports', 'family', 'notifications', 'rewards'], fallback: 'reports' }
+};
+
+function getSavedSubTab(group){
+  const cfg = MG_SUBTAB_CONFIG[group];
+  let tab = cfg.fallback;
+  try {
+    const saved = localStorage.getItem('moneyglow_subtab_' + group);
+    if (saved && cfg.tabs.indexOf(saved) !== -1) tab = saved;
+  } catch(e){}
+  return tab;
+}
+
+function applySubTabVisibility(group, tab){
+  document.querySelectorAll('[data-subtab-group="' + group + '"]').forEach(el => {
+    if (!el.hasAttribute('data-subtab')) return; // skip the tab buttons themselves
+    el.style.display = (el.getAttribute('data-subtab') === tab) ? '' : 'none';
+  });
+  document.querySelectorAll('.mg-subtab-btn[data-subtab-group="' + group + '"]').forEach(btn => {
+    const isActive = btn.getAttribute('data-subtab-target') === tab;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-selected', String(isActive));
+  });
+}
+
+function switchSubTab(group, tab, persist){
+  const cfg = MG_SUBTAB_CONFIG[group];
+  if (!cfg || cfg.tabs.indexOf(tab) === -1) tab = cfg ? cfg.fallback : tab;
+  applySubTabVisibility(group, tab);
+  if (persist !== false) {
+    try { localStorage.setItem('moneyglow_subtab_' + group, tab); } catch(e){}
+  }
+}
+
+(function initBottomNav(){
+  document.body.classList.add('has-bottom-nav');
+  let startScreen = 'home';
+  try {
+    const saved = localStorage.getItem(MG_SCREEN_KEY);
+    if (saved && MG_SCREENS.indexOf(saved) !== -1) startScreen = saved;
+  } catch(e){}
+  // The <nav class="bottom-nav"> markup is positioned in the HTML AFTER this script's own
+  // closing tag (fixed-position elements don't care where they sit in document flow), so
+  // it does not exist in the DOM yet at the moment this IIFE runs during parse.
+  // setTimeout(fn, 0) — the fix used elsewhere in this file for the cross-script-block
+  // hoisting bug (Phase 12) — turned out NOT to be enough here: empirically verified (via
+  // a debug counter) that the trailing <nav> still isn't parsed yet when a 0ms timeout
+  // fires, unlike that earlier case. DOMContentLoaded is the actually-correct signal for
+  // "the whole document, including HTML below this script tag, has finished parsing" — so
+  // use that instead, with a readyState check in case it has already fired by the time
+  // this runs (defensive; in practice this code sits too early in the document for that).
+  function runWhenReady(){ switchScreen(startScreen); }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runWhenReady);
+  } else {
+    runWhenReady();
+  }
+})();
+
+// The AI chat is its own overlay system (#aiPanel, toggled by toggleAI()), not a
+// data-screen section — the Copilot tab shows the copilot-tagged sections (Decision Lab,
+// Life Decisions, Financial Twin, Opportunity Center, Weekly Review) underneath, then
+// opens the chat panel on top, exactly like the old Copilot FAB did. Guards against
+// toggleAI() being a real toggle — re-tapping the tab shouldn't close an already-open chat.
+function openCopilotScreen(){
+  switchScreen('copilot');
+  const panel = document.getElementById('aiPanel');
+  if (panel && !panel.classList.contains('show')) toggleAI();
+}
+
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     BOTTOM NAVIGATION — Mobile UX redesign (see MOBILE_REDESIGN.md).
+     Five destinations: Home / Copilot / Money / Goals / More. Screens
+     are existing sections shown/hidden via data-screen matching —
+     nothing physically moved, nothing recalculated differently.
+     ═══════════════════════════════════════════════════════════════ -->
+<style>
+  .bottom-nav {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    z-index: 500;
+    display: flex;
+    background: rgba(6,9,20,0.86);
+    backdrop-filter: blur(24px) saturate(160%);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    border-top: 1px solid var(--mg-border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+  body.theme-light .bottom-nav { background: rgba(255,255,255,0.88); border-top-color: rgba(0,0,0,0.08); }
+  .bottom-nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 4px 6px;
+    background: none;
+    border: none;
+    color: var(--mg-muted);
+    font-family: inherit;
+    cursor: pointer;
+    min-height: 52px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav-item .bn-icon { position: relative; display: inline-block; font-size: 20px; line-height: 1; transition: transform 0.15s; }
+  .bottom-nav-item .bn-label { font-size: 10px; font-weight: 600; letter-spacing: 0.01em; }
+  .bottom-nav-item.active { color: var(--mg-purple); }
+  .bottom-nav-item.active .bn-icon { transform: translateY(-1px) scale(1.08); }
+  .bottom-nav-item:active .bn-icon { transform: scale(0.92); }
+  /* #aiNotifBadge relocated here from the retired Copilot FAB (MOBILE_REDESIGN.md Phase 5) —
+     same critical-issue-count indicator, now visible on the Copilot tab instead of a hidden button. */
+  .bottom-nav-item .badge-notif {
+    position: absolute;
+    top: -5px; right: -9px;
+    background: #ef4444;
+    color: white;
+    border-radius: 50%;
+    min-width: 15px; height: 15px;
+    font-size: 9px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 3px;
+    line-height: 1;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  /* Reserve space so bottom-nav never covers content */
+  body.has-bottom-nav .container { padding-bottom: 78px; }
+  @media (min-width: 860px) {
+    /* Desktop/tablet: nav becomes a slim top-anchored bar instead of covering content.
+       Real bug found in Phase 7's full regression: position:sticky depends on the
+       element's natural position in document flow, but <nav> sits at the very end of
+       <body> (after all screen content) for the documented mobile reason that
+       position:fixed elements don't care about DOM order. That reasoning doesn't carry
+       over to sticky — its "natural" flow position was effectively the bottom of the
+       whole page, so on desktop the nav never appeared until scrolled all the way down.
+       position:fixed doesn't depend on document-flow position at all (same reasoning
+       already used for the mobile bottom nav), so it renders pinned to the top
+       immediately regardless of where <nav> sits in the DOM. Needs an explicit
+       padding-top reservation on .container since fixed removes it from flow entirely
+       (sticky used to reserve that space implicitly; fixed does not). */
+    .bottom-nav { position: fixed; top: 0; bottom: auto; left: 0; right: 0; border-top: none; border-bottom: 1px solid var(--mg-border); }
+    .bottom-nav-item { flex-direction: row; gap: 6px; padding: 12px 8px; }
+    body.has-bottom-nav .container { padding-bottom: 0; padding-top: 64px; }
+  }
+</style>
+<nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
+  <button class="bottom-nav-item" data-screen-target="home" onclick="switchScreen('home')">
+    <span class="bn-icon">🏠</span><span class="bn-label">Home</span>
+  </button>
+  <button class="bottom-nav-item" data-screen-target="copilot" onclick="openCopilotScreen()">
+    <span class="bn-icon">✨<span class="badge-notif" id="aiNotifBadge" style="display:none">!</span></span><span class="bn-label">Copilot</span>
+  </button>
+  <button class="bottom-nav-item" data-screen-target="money" onclick="switchScreen('money')">
+    <span class="bn-icon">💰</span><span class="bn-label">Money</span>
+  </button>
+  <button class="bottom-nav-item" data-screen-target="goals" onclick="switchScreen('goals')">
+    <span class="bn-icon">🎯</span><span class="bn-label">Goals</span>
+  </button>
+  <button class="bottom-nav-item" data-screen-target="more" onclick="switchScreen('more')">
+    <span class="bn-icon">☰</span><span class="bn-label">More</span>
+  </button>
+</nav>
 
 </body>
 </html>
