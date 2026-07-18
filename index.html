@@ -6277,20 +6277,11 @@ const HOME_MISSION_META = {
 };
 const HOME_MISSION_PRIORITY = ['noOverdue','utilizationHealthy','emergencyStarted','payDebt','logTransaction','setGoal','checkedIn','triedDecisionLab'];
 
-updateUsageStreak();
-renderAll();
-calc();
-// applyFeatureFlags() is defined in a LATER <script> block in this file (this app has
-// 18 separate inline script tags accumulated over many phases — function hoisting only
-// applies WITHIN a single script tag, not across separate ones executing in document
-// order). Calling it directly here threw an uncaught "applyFeatureFlags is not defined"
-// during real bootstrap, which silently aborted the REST of this script block —
-// breaking everything declared further down in it. This is a different bug
-// class than the const-TDZ issues elsewhere in this file (see
-// SCORE_HISTORY_KEY/LIFE_DECISIONS/FEATURE_FLAG_DEFS comments) and needed a different
-// fix: defer with setTimeout so it runs after every script block has finished executing,
-// instead of trying to hunt down which specific earlier block to move the function into.
-setTimeout(function(){ if (typeof applyFeatureFlags === 'function') applyFeatureFlags(); }, 0);
+// The synchronous bootstrap execution block (updateUsageStreak(); renderAll(); calc();)
+// has been moved to the absolute bottom of this consolidated script block.
+// This structurally eliminates Temporal Dead Zone (TDZ) ReferenceErrors, because all
+// const and let variables declared throughout the script will have been instantiated
+// by the time the bootstrap sequence executes.
 
 // ---------- COLLAPSIBLE SECTIONS ----------
 function toggleSection(id){
@@ -19125,6 +19116,15 @@ function openCopilotScreen(){
   const panel = document.getElementById('aiPanel');
   if (panel && !panel.classList.contains('show')) toggleAI();
 }
+
+// ═══════════════════════════════════════════════════════════════
+// BOOTSTRAP INITIALIZATION
+// Executed at the absolute end of the script to prevent TDZ bugs.
+// ═══════════════════════════════════════════════════════════════
+updateUsageStreak();
+renderAll();
+calc();
+if (typeof applyFeatureFlags === 'function') applyFeatureFlags();
 
 </script>
 
