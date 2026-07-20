@@ -1,0 +1,9 @@
+
+# internal-only docs, not meant to be public
+REFACTORS.md
+DESIGN.md
+CLAUDE.md
+BRANDING.md
+MOBILE_REDESIGN.md
+reference/
+vercel/
