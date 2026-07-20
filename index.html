@@ -5078,31 +5078,43 @@ function fmtShort(n){
 // every new visitor sees by default (see startWithSample()/"financeTracker_v2"
 // in localStorage) and gets literally persisted as "sample data" if they tap
 // that option, so it must never contain anyone's real numbers or real creditor
-// names. Kept realistic in shape (a mix of BNPL/cards/loan, one overdue) so the
-// health score, debt-payoff, and AI-plan demos still have something meaningful
-// to show — just fictional.
+// names. Deliberately tuned to land in the "Good/Excellent" health-score band
+// (positive cash flow, no overdue debts, low credit utilization, funded
+// emergency goal) rather than a struggling one — this is most people's first
+// impression of the app, and a first impression of "you're already behind"
+// isn't the one we want to lead with. goals/assets are set explicitly here
+// (not left to the "if (!data.goals)" fallback further down) because that
+// fallback seeds a 0%-funded emergency goal, which would otherwise drag the
+// emergency-fund and goal-progress score factors to near zero regardless of
+// how healthy the income/debt numbers above are.
 let data = {
   income: [
-    { name: 'Salary', amount: 12000 },
-    { name: 'Side Income', amount: 1200 }
+    { name: 'Salary', amount: 14000 },
+    { name: 'Side Income', amount: 1000 }
   ],
   expenses: [
-    { name: 'Rent', amount: 6000, cycle: 1 },
+    { name: 'Rent', amount: 5500, cycle: 1 },
     { name: 'Utilities', amount: 400, cycle: 1 },
-    { name: 'Groceries & Food', amount: 1100, cycle: 1 },
-    { name: 'Transport / Fuel', amount: 450, cycle: 1 },
-    { name: 'Mobile / Misc', amount: 200, cycle: 1 }
+    { name: 'Groceries & Food', amount: 1300, cycle: 1 },
+    { name: 'Transport / Fuel', amount: 500, cycle: 1 },
+    { name: 'Subscriptions / Misc', amount: 300, cycle: 1 }
   ],
   debts: [
-    { name: 'Sample BNPL Plan (OVERDUE)', outstanding: 2400, emi: 800, apr: 0, due: '15-Aug-2026', priority: '🚨 CRITICAL', notes: 'Example — installment plan overdue', payThisMonth: 800, paid: false, color: '#ef4444', creditLimit: 0, type: 'BNPL' },
-    { name: 'Sample Credit Card A', outstanding: 16500, emi: 1400, apr: 38, due: '13-Aug-2026', priority: 'High', notes: 'Example — near credit limit', payThisMonth: 1400, paid: false, color: '#ef4444', creditLimit: 18000, type: 'Credit Card' },
-    { name: 'Sample Credit Card B', outstanding: 6200, emi: 550, apr: 35, due: '05-Aug-2026', priority: 'High', notes: 'Example — high utilization', payThisMonth: 550, paid: false, color: '#f59e0b', creditLimit: 7000, type: 'Credit Card' },
-    { name: 'Sample Personal Loan', outstanding: 85000, emi: 2600, apr: 10.5, due: '04-Aug-2026', priority: 'Medium', notes: 'Example — 36mo term loan', payThisMonth: 2600, paid: false, color: '#10b981', creditLimit: 0, type: 'Loan' }
+    { name: 'Sample BNPL Plan', outstanding: 800, emi: 200, apr: 0, due: '25-Aug-2026', priority: 'Low', notes: 'Example — on-time installment plan', payThisMonth: 200, paid: false, color: '#3b82f6', creditLimit: 0, type: 'BNPL' },
+    { name: 'Sample Credit Card', outstanding: 1800, emi: 350, apr: 22, due: '20-Aug-2026', priority: 'Low', notes: 'Example — healthy utilization', payThisMonth: 350, paid: false, color: '#3b82f6', creditLimit: 8000, type: 'Credit Card' },
+    { name: 'Sample Personal Loan', outstanding: 30000, emi: 950, apr: 7.5, due: '15-Aug-2026', priority: 'Low', notes: 'Example — 36mo term, on track', payThisMonth: 950, paid: false, color: '#10b981', creditLimit: 0, type: 'Loan' }
   ],
   log: [
     { month: 'Aug 2026', debt1: 0, debt2: 0, debt3: 0, debt4: 0, savings: 0, notes: '' }
   ],
-  transactions: []
+  transactions: [],
+  goals: [
+    { name: 'Emergency Fund', target: 15000, current: 15000 }
+  ],
+  assets: [
+    { name: 'Bank Account', amount: 8000 },
+    { name: 'Savings', amount: 5000 }
+  ]
 };
 
 // ---------- RENDER ----------
