@@ -5074,27 +5074,33 @@ function fmtShort(n){
 }
 
 // ---------- DATA MODEL ----------
+// NOTE: this is fictional demo data, not any real person's finances — it's what
+// every new visitor sees by default (see startWithSample()/"financeTracker_v2"
+// in localStorage) and gets literally persisted as "sample data" if they tap
+// that option, so it must never contain anyone's real numbers or real creditor
+// names. Kept realistic in shape (a mix of BNPL/cards/loan, one overdue) so the
+// health score, debt-payoff, and AI-plan demos still have something meaningful
+// to show — just fictional.
 let data = {
   income: [
-    { name: 'Salary', amount: 11500 },
-    { name: 'Tenant Rent', amount: 3800 }
+    { name: 'Salary', amount: 12000 },
+    { name: 'Side Income', amount: 1200 }
   ],
   expenses: [
-    { name: 'Home Rent', amount: 10850, cycle: 2 },
-    { name: 'WiFi', amount: 150, cycle: 1 },
-    { name: 'DEWA', amount: 575, cycle: 1 },
-    { name: 'Groceries & Food', amount: 800, cycle: 1 },
-    { name: 'Transport / Fuel', amount: 400, cycle: 1 },
+    { name: 'Rent', amount: 6000, cycle: 1 },
+    { name: 'Utilities', amount: 400, cycle: 1 },
+    { name: 'Groceries & Food', amount: 1100, cycle: 1 },
+    { name: 'Transport / Fuel', amount: 450, cycle: 1 },
     { name: 'Mobile / Misc', amount: 200, cycle: 1 }
   ],
   debts: [
-    { name: 'Tabby (OVERDUE)', outstanding: 4903.35, emi: 1969.18, apr: 0, due: '15-May-2026', priority: '🚨 CRITICAL', notes: 'Card suspended + AED 127.73 late fee', payThisMonth: 1969.18, paid: false, color: '#ef4444', creditLimit: 0, type: 'BNPL' },
-    { name: 'Mashreq VISA Smart Saver', outstanding: 30746.85, emi: 2909.35, apr: 39, due: '13-Jun-2026', priority: 'High', notes: 'OVER LIMIT by 2520! Includes EPP 1301@260/mo', payThisMonth: 2909.35, paid: false, color: '#ef4444', creditLimit: 29500, type: 'Credit Card' },
-    { name: 'AAFAQ Titanium', outstanding: 9693.66, emi: 822.75, apr: 36, due: '05-Jun-2026', priority: 'High', notes: '99% utilized (limit 10,000)', payThisMonth: 822.75, paid: false, color: '#f59e0b', creditLimit: 10000, type: 'Credit Card' },
-    { name: 'RAKBANK Personal Loan', outstanding: 118313.49, emi: 3721, apr: 10.89, due: '04-Jun-2026', priority: 'Medium', notes: '48mo • matures 04-Aug-2029', payThisMonth: 3721, paid: false, color: '#10b981', creditLimit: 0, type: 'Loan' }
+    { name: 'Sample BNPL Plan (OVERDUE)', outstanding: 2400, emi: 800, apr: 0, due: '15-Aug-2026', priority: '🚨 CRITICAL', notes: 'Example — installment plan overdue', payThisMonth: 800, paid: false, color: '#ef4444', creditLimit: 0, type: 'BNPL' },
+    { name: 'Sample Credit Card A', outstanding: 16500, emi: 1400, apr: 38, due: '13-Aug-2026', priority: 'High', notes: 'Example — near credit limit', payThisMonth: 1400, paid: false, color: '#ef4444', creditLimit: 18000, type: 'Credit Card' },
+    { name: 'Sample Credit Card B', outstanding: 6200, emi: 550, apr: 35, due: '05-Aug-2026', priority: 'High', notes: 'Example — high utilization', payThisMonth: 550, paid: false, color: '#f59e0b', creditLimit: 7000, type: 'Credit Card' },
+    { name: 'Sample Personal Loan', outstanding: 85000, emi: 2600, apr: 10.5, due: '04-Aug-2026', priority: 'Medium', notes: 'Example — 36mo term loan', payThisMonth: 2600, paid: false, color: '#10b981', creditLimit: 0, type: 'Loan' }
   ],
   log: [
-    { month: 'Jun 2026', tabby: 0, mashreq: 0, aafaq: 0, rak: 0, savings: 0, notes: '' }
+    { month: 'Aug 2026', debt1: 0, debt2: 0, debt3: 0, debt4: 0, savings: 0, notes: '' }
   ],
   transactions: []
 };
@@ -5250,12 +5256,12 @@ function renderLog(){
         <button class="remove-btn" onclick="removeLog(${i})">×</button>
       </div>
       <div class="field-grid">
-        <div class="field"><div class="field-label">Tabby</div><input type="number" inputmode="decimal" value="${l.tabby||''}" placeholder="0" oninput="data.log[${i}].tabby=parseFloat(this.value)||0;saveAuto()"/></div>
-        <div class="field"><div class="field-label">Mashreq</div><input type="number" inputmode="decimal" value="${l.mashreq||''}" placeholder="0" oninput="data.log[${i}].mashreq=parseFloat(this.value)||0;saveAuto()"/></div>
+        <div class="field"><div class="field-label">Debt 1</div><input type="number" inputmode="decimal" value="${l.debt1||''}" placeholder="0" oninput="data.log[${i}].debt1=parseFloat(this.value)||0;saveAuto()"/></div>
+        <div class="field"><div class="field-label">Debt 2</div><input type="number" inputmode="decimal" value="${l.debt2||''}" placeholder="0" oninput="data.log[${i}].debt2=parseFloat(this.value)||0;saveAuto()"/></div>
       </div>
       <div class="field-grid">
-        <div class="field"><div class="field-label">AAFAQ</div><input type="number" inputmode="decimal" value="${l.aafaq||''}" placeholder="0" oninput="data.log[${i}].aafaq=parseFloat(this.value)||0;saveAuto()"/></div>
-        <div class="field"><div class="field-label">RAKBANK</div><input type="number" inputmode="decimal" value="${l.rak||''}" placeholder="0" oninput="data.log[${i}].rak=parseFloat(this.value)||0;saveAuto()"/></div>
+        <div class="field"><div class="field-label">Debt 3</div><input type="number" inputmode="decimal" value="${l.debt3||''}" placeholder="0" oninput="data.log[${i}].debt3=parseFloat(this.value)||0;saveAuto()"/></div>
+        <div class="field"><div class="field-label">Debt 4</div><input type="number" inputmode="decimal" value="${l.debt4||''}" placeholder="0" oninput="data.log[${i}].debt4=parseFloat(this.value)||0;saveAuto()"/></div>
       </div>
       <div class="field"><div class="field-label">Savings</div><input type="number" inputmode="decimal" value="${l.savings||''}" placeholder="0" oninput="data.log[${i}].savings=parseFloat(this.value)||0;saveAuto()"/></div>
       <div class="field"><div class="field-label">Notes</div><input value="${escapeHtml(l.notes||'')}" oninput="data.log[${i}].notes=this.value;saveAuto()"/></div>
@@ -6049,7 +6055,7 @@ function addDebtRow(){
 }
 function removeDebt(i){ if(confirm('Remove this debt?')){ data.debts.splice(i,1); renderDebt(); calc(); saveAuto(); } }
 
-function addLogRow(){ data.log.push({month:'New month', tabby:0, mashreq:0, aafaq:0, rak:0, savings:0, notes:''}); renderLog(); saveAuto(); }
+function addLogRow(){ data.log.push({month:'New month', debt1:0, debt2:0, debt3:0, debt4:0, savings:0, notes:''}); renderLog(); saveAuto(); }
 function removeLog(i){ if(confirm('Remove this row?')){ data.log.splice(i,1); renderLog(); saveAuto(); } }
 
 // ---------- START NEW MONTH ----------
@@ -11113,7 +11119,7 @@ function startFresh(){
     ],
     debts: [],
     log: [
-      { month: new Date().toLocaleDateString('en-GB', {month:'short', year:'numeric'}), tabby: 0, mashreq: 0, aafaq: 0, rak: 0, savings: 0, notes: '' }
+      { month: new Date().toLocaleDateString('en-GB', {month:'short', year:'numeric'}), debt1: 0, debt2: 0, debt3: 0, debt4: 0, savings: 0, notes: '' }
     ],
     goals: [
       { name: 'Emergency Fund', target: 5000, current: 0 }
@@ -11201,7 +11207,7 @@ function onboardShowResults(){
       payThisMonth: Math.round(s.debtTotal*0.03), paid: false, priority: 'Medium',
       notes: 'Estimated during setup — edit with your real APR and minimum payment for an accurate plan.'
     }] : [],
-    log: [{ month: new Date().toLocaleDateString('en-GB', {month:'short', year:'numeric'}), tabby:0, mashreq:0, aafaq:0, rak:0, savings:0, notes:'' }],
+    log: [{ month: new Date().toLocaleDateString('en-GB', {month:'short', year:'numeric'}), debt1:0, debt2:0, debt3:0, debt4:0, savings:0, notes:'' }],
     goals: [{ name: 'Emergency Fund', target: Math.max(5000, s.expenses*3), current: s.savings }],
     assets: [{ name: 'Savings', amount: s.savings }],
     onboarding: { goal: s.goal, country: s.country }
