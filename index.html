@@ -3412,6 +3412,8 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
 /* ── FADE-IN CARD ANIMATION ── */
 @keyframes mgFadeUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
 .card { animation: mgFadeUp 0.45s ease both; }
+.card:active { transform: translateY(-2px) !important; box-shadow: 0 1px 0 rgba(255,255,255,0.05) inset, 0 8px 30px rgba(0,0,0,0.3) !important; }
+.mg-fade-in { animation: mgFadeUp 0.3s ease both; }
 .card:nth-child(1){animation-delay:0.04s} .card:nth-child(2){animation-delay:0.08s}
 .card:nth-child(3){animation-delay:0.12s} .card:nth-child(4){animation-delay:0.16s}
 .card:nth-child(5){animation-delay:0.20s} .card:nth-child(6){animation-delay:0.24s}
@@ -3658,39 +3660,20 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     </div>
   </header>
 
-  <!-- Global toolbar + offer banner — relocated here in Phase 4 (MOBILE_REDESIGN.md).
-       No data-screen attribute, so (like the quick-bar and header above) it's always
-       visible regardless of the active tab. It used to sit further down the document,
-       between two of Copilot's/Goals'/More's own sections — since those sections are
-       shown/hidden by data-screen attribute rather than physically reordered, that put
-       this always-visible block in the MIDDLE of those screens' content instead of
-       above it, splitting their tab bar from part of their own sections. Moving it here,
-       next to the other always-visible chrome, fixes that for every screen at once. -->
-  <div class="toolbar mg-toolbar">
-    <button class="mg-tool-btn" onclick="expandAll()" title="Expand All">⬇ <span class="mg-btn-label">Expand</span></button>
-    <button class="mg-tool-btn" onclick="collapseAll()" title="Collapse All">⬆ <span class="mg-btn-label">Collapse</span></button>
-    <button class="mg-tool-btn theme-toggle-btn" id="themeToggleBtn" onclick="toggleTheme()" title="Toggle theme">🌙 <span class="mg-btn-label">Theme</span></button>
-    <button class="mg-tool-btn privacy-btn" id="hideBalanceBtn" onclick="toggleHideBalances()" title="Hide Amounts">👁 <span class="mg-btn-label">Hide</span></button>
-    <button class="mg-tool-btn privacy-btn-backup" onclick="backupOrPremium()" id="backupToolbarBtn" title="Backup your data">☁ <span class="mg-btn-label">Backup</span></button>
-    <button class="mg-tool-btn privacy-btn-lock" onclick="lockOrPremium()" id="lockToolbarBtn" title="Lock App (Premium)">🔒 <span class="mg-btn-label">Lock</span></button>
-    <button class="mg-tool-btn pdf-export-btn" onclick="exportPDFReport()" title="PDF Report">📄 <span class="mg-btn-label">Report</span></button>
-    <button class="mg-tool-btn lang-btn" onclick="openLangPicker()" id="langToolbarBtn" title="Language">🌐 <span class="mg-btn-label" id="langLabel">EN</span></button>
-    <button class="mg-tool-btn mg-settings-btn" id="premiumToolbarBtn" onclick="openPremiumModal()" title="Settings & Premium">⚙ <span class="mg-btn-label">Settings</span></button>
-    <button class="mg-tool-btn" onclick="mgShowInstallModal()" title="Install as App">📱 <span class="mg-btn-label">Install</span></button>
-    <button class="mg-tool-btn mg-feedback-btn" onclick="openFeedbackModal()" title="Feedback">💬 <span class="mg-btn-label">Feedback</span></button>
-  </div>
+  <!-- Global toolbar removed per the "final polish" pass: Theme, Hide Amounts, and
+       Settings/Premium (like every other utility button) now live only in
+       More > Utilities — Home and every other screen no longer show utility buttons.
+       Equivalent cards: Utilities > Appearance > Theme, Utilities > Security > Hide
+       Amounts, Utilities > Support > Settings. -->
 
-  <!-- 🎁 Limited-Time Offer Banner -->
-  <div class="offer-banner" id="offerBanner" onclick="openPremiumModal('🎁 FREE Premium')" style="display:none">
-    <div class="offer-icon">🎁</div>
+  <!-- 🎉 Founder Launch Pricing Banner -->
+  <div class="offer-banner founder-banner" id="offerBanner" onclick="openPremiumModal()" style="display:none">
+    <div class="offer-icon">🎉</div>
     <div class="offer-content">
-      <div class="offer-title" id="offerTitle">FREE for the first 10 signups!</div>
-      <div class="offer-subtitle" id="offerSubtitle">Sign up + message <strong>"free"</strong> to James → get Premium FREE for life. <strong>Tap for details.</strong></div>
+      <div class="offer-title" id="offerTitle">Founder Launch Pricing</div>
+      <div class="offer-subtitle" id="offerSubtitle">Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed. <strong>48 / 50 spots left.</strong></div>
     </div>
-    <div class="offer-countdown" id="offerCountdown">
-      <div class="label">Spots left</div>
-      <div id="offerSpots">10</div>
-    </div>
+    <button class="offer-cta" onclick="event.stopPropagation();openPremiumModal()">Become a Founder</button>
     <button class="offer-dismiss-btn" onclick="event.stopPropagation();dismissOffer()" title="Dismiss">×</button>
   </div>
 
@@ -3762,15 +3745,21 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     .snapshot-tile .value.positive { color: #34d399; }
     .snapshot-tile .value.negative { color: #f87171; }
     body.theme-light .snapshot-tile { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
-    /* F. AI Hub shortcuts */
+    /* F. AI Hub shortcuts — premium preview cards */
     .aihub-list { display: flex; flex-direction: column; gap: 8px; }
-    .aihub-shortcut { display: flex; align-items: center; gap: 12px; background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 12px; cursor: pointer; text-align: left; width: 100%; font-family: inherit; color: inherit; }
-    .aihub-shortcut .icon { font-size: 22px; flex-shrink: 0; }
-    .aihub-shortcut .text { flex: 1; min-width: 0; }
-    .aihub-shortcut .name { font-size: 13px; font-weight: 700; color: var(--mg-text); }
-    .aihub-shortcut .preview { font-size: 11px; color: var(--mg-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .aihub-shortcut .chevron { color: var(--mg-muted); flex-shrink: 0; }
-    body.theme-light .aihub-shortcut { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    .aihub-card { display: flex; align-items: center; gap: 12px; background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 12px 14px; cursor: pointer; text-align: left; width: 100%; font-family: inherit; color: inherit; transition: transform 0.15s, background 0.2s, border-color 0.2s; }
+    .aihub-card:active { transform: scale(0.98); }
+    .aihub-card:hover { background: rgba(139,92,246,0.08); border-color: rgba(139,92,246,0.3); }
+    .aihub-card.premium { border-color: rgba(245,158,11,0.25); }
+    .aihub-icon { font-size: 24px; flex-shrink: 0; }
+    .aihub-text { flex: 1; min-width: 0; }
+    .aihub-name { font-size: 13px; font-weight: 700; color: var(--mg-text); }
+    .aihub-subtitle { font-size: 11.5px; color: var(--mg-text); opacity: 0.85; margin-top: 2px; line-height: 1.35; }
+    .aihub-preview { font-size: 11px; color: var(--mg-muted); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .aihub-badge { display: inline-block; font-size: 9px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; color: #fbbf24; background: rgba(245,158,11,0.15); border-radius: 6px; padding: 2px 6px; margin-top: 5px; animation: mgFadeUp 0.3s ease both; }
+    .aihub-chevron { color: var(--mg-muted); flex-shrink: 0; font-size: 16px; }
+    body.theme-light .aihub-card { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    body.theme-light .aihub-card:hover { background: rgba(139,92,246,0.1); }
     /* G. Quick actions */
     .quickactions-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
     .quickaction-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; background: rgba(6,9,20,0.5); border: 1px solid var(--mg-border); border-radius: 12px; padding: 10px 4px; cursor: pointer; font-family: inherit; color: inherit; }
@@ -4532,11 +4521,111 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
           <button id="mgSyncBtn" onclick="mgSheetsBackup()" style="margin-top:8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:10px 16px;border-radius:8px;cursor:pointer;width:100%;font-weight:600;font-size:13px;font-family:inherit">📊 Sync to Google Sheets</button>
         </div>
       </div>
+</div>
+    </div>
+  </div>
+
+  <!-- UTILITIES -->
+  <style>
+    .utilities-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+    .utility-card { background: rgba(6,9,20,0.5); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 14px; text-align: center; cursor: pointer; transition: transform 0.1s, background 0.2s; }
+    .utility-card:active { transform: scale(0.97); }
+    .utility-card:hover { background: rgba(139,92,246,0.1); border-color: rgba(139,92,246,0.3); }
+    .utility-icon { font-size: 24px; margin-bottom: 6px; }
+    .utility-title { font-size: 12px; font-weight: 700; color: #f1f5f9; }
+    .utility-subtitle { font-size: 10px; color: #94a3b8; margin-top: 2px; }
+    .utility-section { margin-bottom: 20px; }
+    .utility-section-title { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: #64748b; margin-bottom: 8px; font-weight: 700; }
+    body.theme-light .utility-card { background: rgba(255,255,255,0.7); border-color: rgba(0,0,0,0.06); }
+    body.theme-light .utility-card:hover { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); }
+  </style>
+  <div class="card collapsible open" id="sec-utilities" data-screen="more" data-subtab-group="more" data-subtab="rewards">
+    <h2 onclick="toggleSection('sec-utilities')">⚙️ Utilities</h2>
+    <div class="card-body">
+      <div class="utility-section">
+        <div class="utility-section-title">Security</div>
+        <div class="utilities-grid">
+          <div class="utility-card" onclick="lockOrPremium()">
+            <div class="utility-icon">🔒</div>
+            <div class="utility-title">Lock App</div>
+            <div class="utility-subtitle">PIN + Face ID</div>
+          </div>
+          <div class="utility-card" onclick="toggleHideBalances()">
+            <div class="utility-icon">👁</div>
+            <div class="utility-title">Hide Amounts</div>
+            <div class="utility-subtitle" id="hideBalancesUtilitySubtitle">Privacy mode</div>
+          </div>
+          <div class="utility-card" id="faceIdUtilityCard" onclick="toggleFaceIdSetup()">
+            <div class="utility-icon">🔐</div>
+            <div class="utility-title">Face ID</div>
+            <div class="utility-subtitle" id="faceIdUtilitySubtitle">Setup</div>
+          </div>
+        </div>
+      </div>
+      <div class="utility-section">
+        <div class="utility-section-title">Appearance</div>
+        <div class="utilities-grid">
+          <div class="utility-card" onclick="toggleTheme()">
+            <div class="utility-icon">🌙</div>
+            <div class="utility-title">Theme</div>
+            <div class="utility-subtitle">Dark / Light</div>
+          </div>
+          <div class="utility-card" onclick="openLangPicker()">
+            <div class="utility-icon">🌐</div>
+            <div class="utility-title">Language</div>
+            <div class="utility-subtitle">EN / AR</div>
+          </div>
+        </div>
+      </div>
+      <div class="utility-section">
+        <div class="utility-section-title">Data</div>
+        <div class="utilities-grid">
+          <div class="utility-card" onclick="backupOrPremium()">
+            <div class="utility-icon">☁</div>
+            <div class="utility-title">Backup</div>
+            <div class="utility-subtitle">Export / Import</div>
+          </div>
+          <div class="utility-card" onclick="exportPDFReport()">
+            <div class="utility-icon">📄</div>
+            <div class="utility-title">PDF Report</div>
+            <div class="utility-subtitle">Monthly summary</div>
+          </div>
+          <div class="utility-card" onclick="expandAll()">
+            <div class="utility-icon">⬇</div>
+            <div class="utility-title">Expand All</div>
+            <div class="utility-subtitle">Open sections</div>
+          </div>
+          <div class="utility-card" onclick="collapseAll()">
+            <div class="utility-icon">⬆</div>
+            <div class="utility-title">Collapse All</div>
+            <div class="utility-subtitle">Close sections</div>
+          </div>
+        </div>
+      </div>
+      <div class="utility-section">
+        <div class="utility-section-title">Support</div>
+        <div class="utilities-grid">
+          <div class="utility-card" onclick="mgShowInstallModal()">
+            <div class="utility-icon">📱</div>
+            <div class="utility-title">Install App</div>
+            <div class="utility-subtitle">Add to Home Screen</div>
+          </div>
+          <div class="utility-card" onclick="openFeedbackModal()">
+            <div class="utility-icon">💬</div>
+            <div class="utility-title">Feedback</div>
+            <div class="utility-subtitle">Send suggestions</div>
+          </div>
+          <div class="utility-card" onclick="openPremiumModal()">
+            <div class="utility-icon">⚙</div>
+            <div class="utility-title">Settings</div>
+            <div class="utility-subtitle">Premium & Account</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
   
-
   <!-- ALERTS (DYNAMIC) -->
   <div class="card collapsible" id="sec-actions" data-screen="copilot">
   <h2 onclick="toggleSection('sec-actions')">⚠️ Immediate Actions</h2>
@@ -8479,11 +8568,13 @@ function renderHero(){
   if (!ring) return;
 
   const h = computeHealthScore();
-  document.getElementById('heroScoreValue').textContent = h.score;
+  const valueEl = document.getElementById('heroScoreValue');
+  const prevScore = parseFloat(ring.dataset.lastScore || '0');
+  ring.dataset.lastScore = h.score;
+  animateHeroScore(ring, valueEl, prevScore, h.score, h.color);
+
   const deltaTxt = h.scoreDelta === null ? '' : h.scoreDelta === 0 ? ' (no change)' : (h.scoreDelta > 0 ? ` (+${h.scoreDelta})` : ` (${h.scoreDelta})`);
   document.getElementById('heroScoreCaption').textContent = h.band + deltaTxt;
-  ring.style.setProperty('--hero-score-pct', h.score);
-  ring.style.setProperty('--hero-score-color', h.color);
 
   const topActions = scoreImprovementActions(h);
   const priorityEl = document.getElementById('heroTopPriority');
@@ -8504,8 +8595,30 @@ function renderHero(){
     else if (h.score < 70) { riskLabel = 'Medium'; riskClass = 'risk-medium'; }
     else { riskLabel = 'Low'; riskClass = 'risk-low'; }
     riskEl.textContent = riskLabel;
-    riskEl.className = 'health-hero-risk ' + riskClass;
+    // Re-trigger the fade-in each render (removing then re-adding the class
+    // restarts a CSS animation; setting className alone wouldn't if unchanged).
+    riskEl.className = 'health-hero-risk';
+    void riskEl.offsetWidth;
+    riskEl.className = 'health-hero-risk ' + riskClass + ' mg-fade-in';
   }
+}
+
+// Animates the hero ring's fill/number together (~900ms ease-out) instead of
+// snapping instantly — runs on every renderHero() call, animating from
+// whatever the ring last showed (0 on first paint) to the freshly computed score.
+function animateHeroScore(ring, valueEl, from, to, color){
+  ring.style.setProperty('--hero-score-color', color);
+  const duration = 900;
+  const start = performance.now();
+  function step(now){
+    const t = Math.min(1, (now - start) / duration);
+    const eased = 1 - Math.pow(1 - t, 3);
+    const val = from + (to - from) * eased;
+    if (valueEl) valueEl.textContent = Math.round(val);
+    ring.style.setProperty('--hero-score-pct', val);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 // A. Personalized greeting — real local time, stored name, one real-data sentence.
@@ -8602,23 +8715,76 @@ function renderTodaysSnapshot(){
     tile('Debt', 'AED ' + fmtShort(totalDebt));
 }
 
-// F. AI Hub Shortcuts — real one-line previews, not the full content of each feature.
+// F. AI Hub Shortcuts — premium preview cards to spark curiosity.
 function renderAIHubShortcuts(){
   const el = document.getElementById('aiHubShortcutsContent');
   if (!el) return;
   const opportunities = computeOpportunities();
   const wr = computeWeeklyReview();
+  const twin = buildFinancialTwin();
+  const hasDebts = data.debts && data.debts.some(d => (parseFloat(d.outstanding)||0) > 0);
+  
   const shortcuts = [
-    { icon: '🧭', name: 'Life Decisions', preview: 'Run a real decision through the numbers before you commit.', target: 'sec-lifedecisions' },
-    { icon: '👥', name: 'Financial Twin', preview: 'See where your current plan could lead.', target: 'sec-twin' },
-    { icon: '💡', name: 'Opportunities', preview: opportunities.length > 0 ? `${opportunities.length} possible improvement${opportunities.length===1?'':'s'} found.` : 'No urgent opportunities right now.', target: 'sec-opportunities' },
-    { icon: '📅', name: 'Weekly Review', preview: wr.hasHistory ? 'Your latest review is ready.' : 'Check back after a few days of history.', target: 'sec-weeklyreview' }
+    { 
+      icon: '🧭', 
+      name: 'Life Decisions', 
+      subtitle: 'Can you afford your next big decision?',
+      preview: 'Buying a car, moving abroad, changing jobs, renting, investing.',
+      target: 'sec-lifedecisions',
+      premium: true
+    },
+    { 
+      icon: '👥', 
+      name: 'Financial Twin', 
+      subtitle: 'See where your current financial habits could lead.',
+      preview: 'Projects your net worth, debt freedom, and savings trajectory.',
+      target: 'sec-twin',
+      premium: true
+    },
+    { 
+      icon: '📅', 
+      name: 'Weekly Review', 
+      subtitle: 'Understand what improved this week.',
+      preview: wr.hasHistory ? 'Your latest review is ready.' : 'Check back after a few days of history.',
+      target: 'sec-weeklyreview',
+      premium: false
+    },
+    { 
+      icon: '💡', 
+      name: 'Opportunity Center', 
+      subtitle: 'MoneyGlow found new opportunities to improve your finances.',
+      preview: opportunities.length > 0 ? `${opportunities.length} possible improvement${opportunities.length===1?'':'s'} found.` : 'No urgent opportunities right now.',
+      target: 'sec-opportunities',
+      premium: false
+    },
+    { 
+      icon: '🔮', 
+      name: 'Decision Lab', 
+      subtitle: 'Test any financial scenario before you commit.',
+      preview: 'What-if modeling for loans, investments, career moves, and more.',
+      target: 'sec-whatif',
+      premium: true
+    },
+    { 
+      icon: '📊', 
+      name: 'Reports', 
+      subtitle: 'Your monthly CEO report is ready.',
+      preview: 'Cash flow, debt progress, savings rate, and health trends.',
+      target: 'sec-ceoreport',
+      premium: false
+    }
   ];
+  
   el.innerHTML = shortcuts.map(s => `
-    <button class="aihub-shortcut" onclick="openCopilotScreen();setTimeout(()=>goToOpportunity('${s.target}'),350)">
-      <span class="icon">${s.icon}</span>
-      <span class="text"><div class="name">${escapeHtml(s.name)}</div><div class="preview">${escapeHtml(s.preview)}</div></span>
-      <span class="chevron">›</span>
+    <button class="aihub-card ${s.premium ? 'premium' : ''}" onclick="openCopilotScreen();setTimeout(()=>goToOpportunity('${s.target}'),350)">
+      <span class="aihub-icon">${s.icon}</span>
+      <div class="aihub-text">
+        <div class="aihub-name">${escapeHtml(s.name)}</div>
+        <div class="aihub-subtitle">${escapeHtml(s.subtitle)}</div>
+        <div class="aihub-preview">${escapeHtml(s.preview)}</div>
+        ${s.premium ? '<span class="aihub-badge">Premium</span>' : ''}
+      </div>
+      <span class="aihub-chevron">›</span>
     </button>
   `).join('');
 }
@@ -8717,19 +8883,56 @@ function showScoreBreakdown(){
   }
 }
 
-// "Generate my AI plan" — explainable synthesis: score reasoning + top action + timeline + savings.
-// Free tier: composed from the existing offline rule-based reasoning below (no API key needed).
-// Premium with a connected provider: same context is handed to askRealAI() for a richer writeup.
+// "Generate my AI plan" — full-screen loading animation then personalized plan.
 async function generateAIPlan(){
+  // Show full-screen loading overlay
+  const overlay = document.createElement('div');
+  overlay.id = 'aiPlanLoadingOverlay';
+  overlay.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    background:rgba(6,9,20,0.98);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:20px;color:#f1f5f9;font-family:inherit;
+  `;
+  overlay.innerHTML = `
+    <div style="font-size:48px;animation:pulse 1.5s ease-in-out infinite">✨</div>
+    <div id="aiPlanLoadingText" style="font-size:18px;font-weight:600;text-align:center">Analyzing your finances...</div>
+    <div style="width:200px;height:4px;background:rgba(255,255,255,0.1);border-radius:2px;overflow:hidden">
+      <div style="width:0%;height:100%;background:linear-gradient(90deg,#8b5cf6,#3b82f6);border-radius:2px;animation:loadBar 2.5s ease-out forwards"></div>
+    </div>
+    <style>
+      @keyframes pulse { 0%,100% { transform:scale(1); opacity:0.8; } 50% { transform:scale(1.1); opacity:1; } }
+      @keyframes loadBar { from { width:0%; } to { width:100%; } }
+    </style>
+  `;
+  document.body.appendChild(overlay);
+
+  // Progressive loading messages
+  const loadingMessages = [
+    'Analyzing your finances...',
+    'Finding savings opportunities...',
+    'Calculating debt strategy...',
+    'Building your personalized plan...'
+  ];
+  let msgIndex = 0;
+  const msgEl = document.getElementById('aiPlanLoadingText');
+  const msgInterval = setInterval(() => {
+    msgIndex++;
+    if (msgEl && msgIndex < loadingMessages.length) {
+      msgEl.textContent = loadingMessages[msgIndex];
+    } else {
+      clearInterval(msgInterval);
+    }
+  }, 600);
+
+  // Wait for animation (2.5s total)
+  await new Promise(r => setTimeout(r, 2600));
+  clearInterval(msgInterval);
+  overlay.remove();
+
+  // Now open Copilot and generate personalized plan
   if (!document.getElementById('aiPanel').classList.contains('show')) toggleAI();
   addAIMessage('user', '✨ Generate my AI plan');
-
-  const msgs = document.getElementById('aiMessages');
-  const thinking = document.createElement('div');
-  thinking.className = 'ai-msg thinking';
-  thinking.textContent = 'Thinking';
-  msgs.appendChild(thinking);
-  scrollAIToBottom();
 
   const h = computeHealthScore();
   const baseline = simulateAvalanche(0);
@@ -8738,36 +8941,56 @@ async function generateAIPlan(){
   const monthsSaved = boosted && baseline.debtFree && boosted.debtFree ? baseline.months - boosted.months : 0;
   const interestSaved = boosted ? Math.max(0, baseline.totalInterest - boosted.totalInterest) : 0;
 
-  let reply;
+  // Build personalized plan using internal rules engine
+  let plan = buildPersonalizedPlan(h, baseline, boosted, extra, monthsSaved, interestSaved);
+
+  // If external AI is connected, enhance the plan
   try {
     if (aiSettings.provider !== 'none' && aiSettings.apiKey) {
-      const planPrompt = 'Generate my AI financial plan. Give me: 1) my current standing in one line, 2) the single most important action to take next and why, 3) my debt-free timeline, 4) how much I could save in interest and how. Base everything strictly on my data below and be specific with numbers.';
-      reply = await askRealAI(planPrompt);
-    } else {
-      throw new Error('offline');
+      const planPrompt = 'Enhance this financial plan with a warm, personalized tone. Keep all numbers and recommendations exactly as provided. Add encouraging closing. Plan:\n' + plan;
+      const enhanced = await askRealAI(planPrompt);
+      if (enhanced) plan = enhanced;
     }
   } catch(e) {
-    let plan = '✨ <strong>Your AI Plan</strong><br><br>';
-    plan += '📐 Health Score: <strong>' + h.score + '/100 (' + h.band + ')</strong><br><br>';
-    plan += '<strong>Why:</strong><br>' + h.factors.map(f => '• ' + f.icon + ' ' + f.label + ': ' + f.detail).join('<br>') + '<br><br>';
-    plan += '<strong>Do this next:</strong><br>' + biggestProblem() + '<br><br>';
-    if (baseline.debtFree && baseline.months > 0) {
-      plan += '<strong>Timeline:</strong> Debt-free by <strong>' + fmtDate(baseline.payoffDate) + '</strong> at current payments';
-      if (interestSaved > 0) {
-        plan += ', or <strong>' + fmtDate(boosted.payoffDate) + '</strong> (' + monthsSaved + ' months sooner) if you direct your AED ' + fmt(extra) + ' free cash to your highest-APR debt — saving <strong>AED ' + fmt(interestSaved) + '</strong> in interest.';
-      } else {
-        plan += '. Free up cash flow to accelerate this.';
-      }
-    } else if (baseline.months === 0) {
-      plan += '<strong>Timeline:</strong> You are debt-free — redirect payments into savings & investments.';
-    } else {
-      plan += '<strong>Timeline:</strong> Current payments are too low to ever clear your debts — raise a payment above its APR-driven minimum first.';
-    }
-    reply = plan;
+    // Offline plan already built, use it
   }
 
-  thinking.remove();
-  addAIMessage('assistant', reply);
+  addAIMessage('assistant', plan);
+}
+
+// Build personalized financial plan using internal rules engine
+function buildPersonalizedPlan(h, baseline, boosted, extra, monthsSaved, interestSaved){
+  const name = data.user?.name || 'there';
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 17 ? 'Good afternoon' : 'Good evening';
+  
+  // Top priority from biggestProblem()
+  const topPriority = biggestProblem();
+  
+  // Calculate potential health score improvement
+  const actions = scoreImprovementActions(h);
+  const potentialGain = actions.reduce((sum, a) => sum + a.potentialGain, 0);
+  const projectedScore = Math.min(100, Math.round(h.score + potentialGain));
+  
+  // Debt-free date improvement
+  let debtFreeImprovement = '';
+  if (baseline.debtFree && boosted && boosted.debtFree && monthsSaved > 0) {
+    debtFreeImprovement = `Estimated debt-free date improves by approximately ${monthsSaved} month${monthsSaved===1?'':'s'}.`;
+  }
+  
+  let plan = `${greeting}, ${name}.<br><br>`;
+  plan += `I analyzed your finances.<br><br>`;
+  plan += `<strong>Today's highest priorities:</strong><br>`;
+  plan += `1. ${topPriority}<br><br>`;
+  
+  plan += `<strong>Potential improvements:</strong><br>`;
+  plan += `Financial Health<br>`;
+  plan += `${h.score} → ${projectedScore}<br><br>`;
+  if (debtFreeImprovement) {
+    plan += `${debtFreeImprovement}<br><br>`;
+  }
+  plan += `Tap any topic to dive deeper, or ask me anything.`;
+  
+  return plan;
 }
 
 // ---------- SAVINGS GOALS ----------
@@ -9479,21 +9702,19 @@ document.addEventListener('visibilitychange', () => {
 // ---------- HIDE BALANCES ----------
 function toggleHideBalances(){
   const isHidden = document.body.classList.toggle('hide-balances');
-  const btn = document.getElementById('hideBalanceBtn');
-  btn.classList.toggle('active', isHidden);
-  btn.innerHTML = isHidden ? '👁️‍🗨️ Show Amounts' : '👁️ Hide Amounts';
   localStorage.setItem('financeTracker_hideBalances', isHidden ? '1' : '0');
+  renderHideBalancesUtilityCard();
+}
+function renderHideBalancesUtilityCard(){
+  const el = document.getElementById('hideBalancesUtilitySubtitle');
+  if (el) el.textContent = document.body.classList.contains('hide-balances') ? 'Hidden — tap to show' : 'Privacy mode';
 }
 
 // Restore hide state
 if (localStorage.getItem('financeTracker_hideBalances') === '1') {
   document.body.classList.add('hide-balances');
-  const btn = document.getElementById('hideBalanceBtn');
-  if (btn) {
-    btn.classList.add('active');
-    btn.innerHTML = '👁️‍🗨️ Show Amounts';
-  }
 }
+renderHideBalancesUtilityCard();
 
 // ---------- ENCRYPTED BACKUP / RESTORE ----------
 async function encryptData(plaintext, password){
@@ -9889,33 +10110,29 @@ showLockScreen = async function(mode) {
   }
 };
 
-// Add a "Setup Face ID" option in the toolbar too (only shown when unlocked and PIN is set)
-async function addBiometricToToolbar(){
+// Face ID setup/removal — lives as a card in More > Utilities > Security
+// (not injected into the always-visible toolbar; see MOBILE_REDESIGN.md's utility-buttons move).
+async function toggleFaceIdSetup(){
   const available = await biometricAvailable();
-  if (!available) return;
-  const toolbar = document.querySelector('.toolbar');
-  if (!toolbar) return;
+  if (!available) { setupBiometric(); return; } // reuses its own "not available" alert
   const registered = !!localStorage.getItem(WEBAUTHN_KEY);
-  const btn = document.createElement('button');
-  btn.className = 'privacy-btn';
-  btn.id = 'toolbarBioBtn';
-  btn.textContent = registered ? '🔐 Face ID ✓' : '🔐 Setup Face ID';
-  btn.onclick = () => {
-    if (registered) {
-      if (confirm('Face ID is already set up.\n\nRemove Face ID? (You\'ll still have your PIN.)')) {
-        localStorage.removeItem(WEBAUTHN_KEY);
-        btn.textContent = '🔐 Setup Face ID';
-        alert('Face ID removed.');
-      }
-    } else {
-      setupBiometric().then(()=>{
-        btn.textContent = localStorage.getItem(WEBAUTHN_KEY) ? '🔐 Face ID ✓' : '🔐 Setup Face ID';
-      });
+  if (registered) {
+    if (confirm('Face ID is already set up.\n\nRemove Face ID? (You\'ll still have your PIN.)')) {
+      localStorage.removeItem(WEBAUTHN_KEY);
+      alert('Face ID removed.');
+      renderFaceIdUtilityCard();
     }
-  };
-  toolbar.appendChild(btn);
+  } else {
+    await setupBiometric();
+    renderFaceIdUtilityCard();
+  }
 }
-addBiometricToToolbar();
+function renderFaceIdUtilityCard(){
+  const el = document.getElementById('faceIdUtilitySubtitle');
+  if (!el) return;
+  el.textContent = localStorage.getItem(WEBAUTHN_KEY) ? 'Enabled ✓' : 'Setup';
+}
+renderFaceIdUtilityCard();
 updateBiometricUI();
 
 
@@ -11359,8 +11576,19 @@ function openPremiumModal(featureHighlight){
   } else {
     const founderCount = getFounderVerifiedCount();
     const founderLeft = Math.max(0, config.pricing.founderCap - founderCount);
+    const isFounderTierOpen = founderLeft > 0;
     modal.innerHTML = `
       <div class="premium-modal" style="text-align:left">
+        <!-- Founder Launch Banner -->
+        <div style="background:linear-gradient(135deg,rgba(245,158,11,0.2),rgba(239,68,68,0.15));border:1px solid rgba(245,158,11,0.3);border-radius:12px;padding:16px;margin-bottom:16px;text-align:center">
+          <div style="font-size:20px;margin-bottom:4px">🎉</div>
+          <div style="font-size:14px;font-weight:700;color:#fbbf24;margin-bottom:2px">Founder Launch Pricing</div>
+          <div style="font-size:12px;color:#fde68a;margin-bottom:8px">Become one of the first MoneyGlow members.</div>
+          <div style="font-size:13px;color:#fef3c7">Lock your Premium subscription at <strong style="color:#fff;font-size:15px">AED 19/month</strong></div>
+          <div style="font-size:11px;color:#fde68a;margin-top:4px">As long as your subscription stays active, your price will never increase.</div>
+          <div style="font-size:11px;color:#fbbf24;margin-top:8px;font-weight:600">Founder spots remaining: <span id="founderSpotsCount">${founderLeft} / ${config.pricing.founderCap}</span></div>
+        </div>
+
         <div class="crown" style="text-align:center">👑</div>
         <h2 style="text-align:center">Become debt-free faster.</h2>
         <p style="color:#94a3b8;font-size:13px;text-align:center">${featureHighlight ? '<strong style="color:#f59e0b">' + featureHighlight + '</strong> is a premium feature.<br><br>' : ''}Your Health Score, Decision Lab, Debt Optimizer, and Opportunity Center are already free. Premium adds real AI depth, security, and backup on top.</p>
@@ -11373,17 +11601,16 @@ function openPremiumModal(featureHighlight){
           </div>
           <div class="pricing-tier featured">
             <div class="pt-badge">LAUNCH PRICE</div>
-            <div class="pt-name">Premium Monthly</div>
+            <div class="pt-name">Premium</div>
             <div class="pt-price">AED ${config.pricing.premiumMonthlyAed}<span>/mo</span></div>
-            <div class="pt-note">${config.pricing.premiumMonthlyNote}</div>
             <div class="pt-desc">Real AI chat, PIN + Face ID, encrypted backup, unlimited goals, net worth tracker, bill calendar, voice input.</div>
-            <button class="premium-buy-btn" onclick="choosePaymentMethod('monthly')">Choose Premium Monthly</button>
+            <button class="premium-buy-btn" onclick="choosePaymentMethod('monthly')">Choose Premium</button>
           </div>
-          <div class="pricing-tier">
-            <div class="pt-badge founder-badge">${founderLeft > 0 ? founderLeft + ' OF ' + config.pricing.founderCap + ' LEFT' : 'FULL'}</div>
-            <div class="pt-name">Founder Access</div>
-            <div class="pt-price">AED ${config.pricing.founderOnceAed}<span>one-time</span></div>
-            <div class="pt-desc">Everything in Premium, forever — plus a Founder badge, priority feedback, and early access to future features.</div>
+          <div class="pricing-tier ${isFounderTierOpen ? '' : 'opacity-50'}" style="${isFounderTierOpen ? '' : 'opacity:0.6;pointer-events:none'}">
+            <div class="pt-badge founder-badge">${founderLeft > 0 ? founderLeft + ' OF ' + config.pricing.founderCap + ' SPOTS LEFT' : 'FULL'}</div>
+            <div class="pt-name">Founder</div>
+            <div class="pt-price">AED ${config.pricing.premiumMonthlyAed}<span>/mo</span></div>
+            <div class="pt-desc" style="font-size:12px;line-height:1.5">Exactly the same Premium features.<br><strong>Benefits:</strong> Founder badge • Locked lifetime pricing (while subscribed) • Early feature access • Private Founder community (Coming Soon)</div>
             ${founderLeft > 0
               ? `<button class="premium-buy-btn founder-btn" onclick="choosePaymentMethod('founder')">Become a Founder</button>`
               : `<button class="premium-buy-btn" disabled style="opacity:0.5;cursor:not-allowed">Founder spots full</button>`}
@@ -11395,7 +11622,6 @@ function openPremiumModal(featureHighlight){
           <input type="text" id="licenseKeyInput" placeholder="Paste your key here" style="font-family:monospace;text-transform:uppercase"/>
           <button class="action btn-success" style="margin-top:6px" onclick="applyLicenseKey()">🔓 Activate</button>
         </div>
-        <!-- Founder PIN prompt hidden — triggered by secret tap on title -->
         <div style="text-align:center;margin-top:6px"><a href="#" onclick="event.preventDefault();checkPaymentStatus()" style="font-size:11px;color:#8b5cf6">Already paid? Check your status →</a></div>
         <div style="text-align:center;margin-top:4px"><a href="#" onclick="event.preventDefault();closeModal();openTrustCenter('payment')" style="font-size:11px;color:#64748b">🛡️ Payment terms & Trust Center</a></div>
 
@@ -11410,8 +11636,8 @@ function openPremiumModal(featureHighlight){
 function choosePaymentMethod(tier){
   const config = getPaymentConfig();
   const isFounder = tier === 'founder';
-  const priceAed = isFounder ? config.pricing.founderOnceAed : config.pricing.premiumMonthlyAed;
-  const label = isFounder ? `Founder Access (AED ${priceAed} one-time)` : `Premium Monthly (AED ${priceAed}/mo)`;
+  const priceAed = config.pricing.premiumMonthlyAed; // Same price for both
+  const label = isFounder ? `Founder (AED ${priceAed}/mo — locked pricing)` : `Premium (AED ${priceAed}/mo)`;
   document.getElementById('modalContent').innerHTML = `
     <div class="premium-modal">
       <h2>${label}</h2>
@@ -11773,7 +11999,7 @@ function receiptPickerHtml(inputId){
 // ---------- USDT ----------
 function openUsdtPaymentFlow(tier){
   const config = getPaymentConfig();
-  const priceAed = tier === 'founder' ? config.pricing.founderOnceAed : config.pricing.premiumMonthlyAed;
+  const priceAed = config.pricing.premiumMonthlyAed; // Same price for both tiers
   const amountUsdt = aedToUsdt(priceAed);
   let qrSvg = '';
   try { qrSvg = QR.toSVG(config.usdt.address, { cellSize: 5, margin: 3, pixelSize: 180 }); }
@@ -11838,7 +12064,7 @@ function submitUsdtPayment(tier){
 // ---------- BANK TRANSFER (UAE only) ----------
 function openBankTransferFlow(tier){
   const config = getPaymentConfig();
-  const priceAed = tier === 'founder' ? config.pricing.founderOnceAed : config.pricing.premiumMonthlyAed;
+  const priceAed = config.pricing.premiumMonthlyAed; // Same price for both tiers
   const submissionId = generateSubmissionId();
   document.getElementById('modalContent').innerHTML = `
     <div class="premium-modal" style="text-align:left">
@@ -12085,7 +12311,7 @@ function ccRenderFounderMembers(){
 function ccRenderBilling(){
   const config = getPaymentConfig();
   const confirmedPayments = readPaymentSubmissions().filter(p => p.status === 'confirmed');
-  const priceFor = p => p.tier === 'founder' ? config.pricing.founderOnceAed : config.pricing.premiumMonthlyAed;
+  const priceFor = p => config.pricing.premiumMonthlyAed; // Same price for both tiers
   const total = confirmedPayments.reduce((s,p) => s + priceFor(p), 0);
   const rows = confirmedPayments.slice().reverse().map(p => `
     <tr><td>${p.submissionId}</td><td>${tierLabel(p.tier)}</td><td>AED ${priceFor(p)}</td><td>${p.method==='usdt'?'USDT':'Bank'}</td><td>${fmtDate(new Date(p.verifiedAt||p.submittedAt))}</td></tr>
@@ -12281,8 +12507,8 @@ function ccRenderSettings(){
       <input type="text" id="ccUsdtAddress" value="${config.usdt.address}" style="font-family:monospace"/>
       <label style="font-size:11px;color:#94a3b8;margin-top:8px;display:block">Premium Monthly Price (AED)</label>
       <input type="number" id="ccPremiumPrice" value="${config.pricing.premiumMonthlyAed}"/>
-      <label style="font-size:11px;color:#94a3b8;margin-top:8px;display:block">Founder Access Price (AED)</label>
-      <input type="number" id="ccFounderPrice" value="${config.pricing.founderOnceAed}"/>
+      <label style="font-size:11px;color:#94a3b8;margin-top:8px;display:block">Founder Monthly Price (AED)</label>
+      <input type="number" id="ccFounderPrice" value="${config.pricing.founderMonthlyAed}"/>
       <label style="font-size:11px;color:#94a3b8;margin-top:8px;display:block">Founder Cap</label>
       <input type="number" id="ccFounderCap" value="${config.pricing.founderCap}"/>
       <button class="action btn-success" style="margin-top:12px" onclick="ccSaveSettings()">💾 Save</button>
@@ -12298,7 +12524,7 @@ function ccSaveSettings(){
     pricing: {
       ...current.pricing,
       premiumMonthlyAed: parseFloat(document.getElementById('ccPremiumPrice').value) || current.pricing.premiumMonthlyAed,
-      founderOnceAed: parseFloat(document.getElementById('ccFounderPrice').value) || current.pricing.founderOnceAed,
+      founderMonthlyAed: parseFloat(document.getElementById('ccFounderPrice').value) || current.pricing.founderMonthlyAed,
       founderCap: parseInt(document.getElementById('ccFounderCap').value, 10) || current.pricing.founderCap
     }
   };
@@ -12409,12 +12635,12 @@ const TC_CONTENT = {
     const config = getPaymentConfig();
     return `
     <h2>Payment Terms</h2>
-    <p class="tc-sub">How Premium and Founder Access actually work — no automated billing exists yet, so every payment is manually reviewed.</p>
+    <p class="tc-sub">How Premium and Founder work — no automated billing exists yet, so every payment is manually reviewed.</p>
     <h3>Plans</h3>
     <ul>
       <li><strong>Free</strong> — AED 0. Budgeting, cash flow, debt tracking, Financial Decision Lab, Debt Optimizer, Opportunity Center, and your Financial Health Score are all free, permanently.</li>
-      <li><strong>Premium Monthly</strong> — AED ${config.pricing.premiumMonthlyAed}/month. ${config.pricing.premiumMonthlyNote}.</li>
-      <li><strong>Founder Access</strong> — AED ${config.pricing.founderOnceAed} one-time, limited to the first ${config.pricing.founderCap} verified members. Includes current Premium features, future core updates, and a Founder badge. Founder Access does not include unlimited third-party AI usage or separately-priced future add-ons.</li>
+      <li><strong>Premium</strong> — AED ${config.pricing.premiumMonthlyAed}/month. ${config.pricing.premiumMonthlyNote}.</li>
+      <li><strong>Founder</strong> — AED ${config.pricing.founderMonthlyAed}/month, limited to the first ${config.pricing.founderCap} verified members. Exactly the same Premium features. <strong>Benefits:</strong> Founder badge • Locked lifetime pricing (while subscription stays active) • Early feature access • Private Founder community (Coming Soon). No lifetime software license — pricing locked only while actively subscribed.</li>
     </ul>
     <h3>How payment currently works</h3>
     <p>MoneyGlow AI is in Early Access and doesn't yet have a payment processor connected. To keep costs low while the platform is still being built, two manually-verified methods are supported:</p>
@@ -12425,7 +12651,7 @@ const TC_CONTENT = {
     <p>Every submission gets a unique Submission ID and enters <strong>Pending Verification</strong>. Premium is activated only after a real, manual review — never automatically from a frontend "I paid" click. You'll receive a license key by email once verified.</p>
     <div class="tc-warn">⚠️ Blockchain payments are irreversible. Always double-check the network, address, and amount before sending USDT — sending on the wrong network or to the wrong address can permanently lose your funds. MoneyGlow will never ask for your seed phrase, private key, or wallet password.</div>
     <h3>Cancellation</h3>
-    <p>You can stop renewing Premium Monthly anytime — your current billing period stays active until it expires, you're just not billed again after. Founder Access is a one-time purchase and doesn't renew.</p>
+    <p>You can cancel Premium anytime — your current billing period stays active until it expires, you're just not billed again after. Founder pricing is locked at AED 19/month as long as your subscription remains active.</p>
     <h3>Responsibility</h3>
     <p>You're responsible for selecting the correct payment method, network, and reference/Submission ID, and for keeping proof of payment. If verification information is incomplete or inconsistent, MoneyGlow may request additional confirmation before activating Premium.</p>
   `;},
@@ -12556,7 +12782,7 @@ const TC_CONTENT = {
     <div class="tc-faq-item"><div class="q">Can I export my data?</div><p>Yes, anytime, via the Backup button — plain or password-protected encrypted download.</p></div>
     <div class="tc-faq-item"><div class="q">Can I delete my account?</div><p>Yes — Settings → Reset → Nuclear Reset removes everything permanently. See <a href="#" onclick="event.preventDefault();tcSwitchTopic('datadeletion')" style="color:#5eead4">Data Deletion</a>.</p></div>
     <div class="tc-faq-item"><div class="q">How do Premium payments work?</div><p>Bank Transfer or USDT, manually verified, license key issued after. See <a href="#" onclick="event.preventDefault();tcSwitchTopic('payment')" style="color:#5eead4">Payment Terms</a>.</p></div>
-    <div class="tc-faq-item"><div class="q">How does Founder Access work?</div><p>A one-time payment for the first batch of members, giving permanent access plus a Founder badge — see Payment Terms for the current price and cap.</p></div>
+    <div class="tc-faq-item"><div class="q">How does Founder work?</div><p>Same monthly subscription and price as Premium, limited to the first batch of members — it locks that price in for as long as you stay subscribed, plus a Founder badge. See Payment Terms for the current price and cap.</p></div>
     <div class="tc-faq-item"><div class="q">How does Bank Transfer verification work?</div><p>You transfer using the Submission ID as your reference, then submit it in-app. It's matched and confirmed manually.</p></div>
     <div class="tc-faq-item"><div class="q">How does USDT verification work?</div><p>You send USDT and submit the transaction hash. It's checked against the blockchain manually before Premium activates.</p></div>
     <div class="tc-faq-item"><div class="q">Why was my payment rejected?</div><p>Usually a mismatched amount, wrong network, or a reference that couldn't be matched. Check your payment status in-app for the specific reason.</p></div>
@@ -12623,7 +12849,7 @@ function generateInvoicePDF(id){
   const entry = readPaymentSubmissions().find(p => p.id === id);
   if (!entry || entry.status !== 'confirmed') return;
   const config = getPaymentConfig();
-  const priceAed = entry.tier === 'founder' ? config.pricing.founderOnceAed : config.pricing.premiumMonthlyAed;
+  const priceAed = config.pricing.premiumMonthlyAed; // Same price for both tiers
   const issued = new Date(entry.verifiedAt || entry.submittedAt);
   const win = window.open('', '_blank', 'width=800,height=900');
   if (!win) { alert('⚠️ Please allow popups to generate the invoice.'); return; }
@@ -12658,7 +12884,7 @@ function generateInvoicePDF(id){
   <table>
     <thead><tr><th>Description</th><th style="text-align:right">Amount</th></tr></thead>
     <tbody>
-      <tr><td>${tierLabel(entry.tier)}${entry.tier === 'founder' ? ' — one-time' : ' — 30 days'}</td><td style="text-align:right">AED ${priceAed}.00</td></tr>
+      <tr><td>${tierLabel(entry.tier)} — 30 days</td><td style="text-align:right">AED ${priceAed}.00</td></tr>
       <tr class="total-row"><td>Total Paid</td><td style="text-align:right">AED ${priceAed}.00</td></tr>
     </tbody>
   </table>
@@ -12751,8 +12977,8 @@ const PAYMENT_CONFIG = {
   appName: 'MoneyGlow AI',
   pricing: {
     premiumMonthlyAed: 19,
-    premiumMonthlyNote: 'Launch price — regular future price AED 39/month',
-    founderOnceAed: 149,
+    premiumMonthlyNote: 'Founder launch price — regular future price AED 39/month',
+    founderMonthlyAed: 19,
     founderCap: 50
   },
   usdt: {
@@ -13064,9 +13290,9 @@ const TOUR_STEPS = [
     position: 'left'
   },
   {
-    selector: '#premiumToolbarBtn',
+    selector: '#offerBanner',
     title: '👑 Unlock Premium',
-    body: 'One-time AED 10 unlocks PIN/Face ID, encrypted backup, and real AI chat. Free features are great too — no pressure!',
+    body: 'AED 19/month unlocks PIN/Face ID, encrypted backup, and real AI chat. Free features are great too — no pressure! Tap More > Settings anytime to upgrade.',
     position: 'bottom'
   },
   {
@@ -13680,7 +13906,7 @@ answerOffline = function(question){
     return '🔒 I can\'t share my internal instructions or app internals. Let\'s focus on your finances instead — what would you like help with?';
   }
   if (q.includes('founder key') || q.includes('founder access') || q.includes('admin') || q.includes('crack') || q.includes('hack') || q.includes('bypass premium')) {
-    return '🔒 I can\'t help with bypassing the app\'s features. The premium upgrade (AED 10 one-time) supports the development of MoneyGlow AI. If you need free access, contact <strong>James Panchal</strong> directly via the 💬 Feedback button — he\'s generous with founder keys for genuine cases!';
+    return '🔒 I can\'t help with bypassing the app\'s features. The premium upgrade (AED 19/month) supports the development of MoneyGlow AI. If you need free access, contact <strong>James Panchal</strong> directly via the 💬 Feedback button — he\'s generous with founder keys for genuine cases!';
   }
   if (q.includes('suicide') || q.includes('end my life') || q.includes('kill myself')) {
     return '💚 Please reach out to someone who can help right now. In UAE, you can call <strong>Estijaba: 800-HOPE (800-4673)</strong> — it\'s free, confidential, 24/7. Financial stress is real but it does pass with the right support. I\'m just an AI, but you matter, and help is available.';
@@ -13802,7 +14028,7 @@ function removeSubscription(i){
 // ============ 🎁 REFERRAL PROGRAM =======================
 // ========================================================
 // Users earn 1 free month of premium per friend who signs up
-// Earn 3 referrals = free lifetime premium
+// Earn 3 referrals = locked-in Founder pricing (AED 19/mo, while subscribed)
 
 function getReferralCode(){
   let code = localStorage.getItem('moneyglow_referralCode');
@@ -13859,7 +14085,7 @@ function renderReferral(){
     var nextTierLabel;
     if (buyersCount >= 10) nextTierLabel = '🏆 Top Ambassador — max tier!';
     else if (buyersCount >= 3) nextTierLabel = (10 - buyersCount) + ' more buyers → 🥇 Ambassador (AED 50)';
-    else if (buyersCount >= 1) nextTierLabel = (3 - buyersCount) + ' more buyers → 🥈 Lifetime Premium';
+    else if (buyersCount >= 1) nextTierLabel = (3 - buyersCount) + ' more buyers → 🥈 Locked Founder pricing';
     else if (signupsCount >= 1) nextTierLabel = '1 buyer → 🥉 Inviter (free month)';
     else nextTierLabel = 'Share your link to start earning';
 
@@ -13942,7 +14168,7 @@ function openRewardsModal(){
   const modal = document.getElementById('modalContent');
   modal.innerHTML = `
     <h3>🏆 Referral Rewards</h3>
-    <p>The more friends you bring, the bigger the rewards. Lifetime perks, real value, zero pressure.</p>
+    <p>The more friends you bring, the bigger the rewards. Real perks, real value, zero pressure.</p>
 
     <div style="margin-top:16px">
       <!-- TIER 1 -->
@@ -13965,7 +14191,7 @@ function openRewardsModal(){
           <div style="font-size:11px;color:${tier2Reached?'#10b981':'#94a3b8'};font-weight:700">${tier2Reached?'✅ EARNED':buyers+'/3 buyers'}</div>
         </div>
         <ul style="list-style:none;padding-left:0;font-size:13px;color:#cbd5e1;line-height:1.7">
-          <li>🎉 <strong>LIFETIME Premium FREE</strong> (you never pay)</li>
+          <li>🎉 <strong>Founder pricing locked in</strong> — AED 19/mo, never increases while subscribed</li>
           <li>🥈 "Early Supporter" exclusive badge</li>
           <li>📜 Custom thank-you certificate</li>
           <li>🌟 Spot on the Founders Wall (early supporters listed)</li>
@@ -14002,7 +14228,7 @@ function openRewardsModal(){
     </div>
 
     <div style="margin-top:14px;padding:12px;background:rgba(59,130,246,0.1);border-radius:8px;font-size:12px;color:#93c5fd">
-      ℹ️ <strong>Friend gets too:</strong> Anyone using your link gets a <strong>7-day free Premium trial</strong> + <strong>10% off</strong> (AED 9 instead of AED 10) when they upgrade.
+      ℹ️ <strong>Friend gets too:</strong> Anyone using your link gets a <strong>7-day free Premium trial</strong> + <strong>10% off</strong> (AED 17 instead of AED 19) when they upgrade.
     </div>
 
     <div style="margin-top:14px;padding:10px;background:rgba(245,158,11,0.1);border-radius:8px;font-size:11px;color:#fbbf24">
@@ -14037,13 +14263,15 @@ window.creditReferralBuyer = function(code){
   // It's the user's own code - increment their stats
   updateReferralStats('buyers', 1);
   const stats = getReferralStats();
-  alert(`🎉 Credited 1 buyer to your code!\n\nTotal buyers: ${stats.buyers}\n\n${stats.buyers === 1 ? '🥉 You unlocked: 1 month free Premium trial!' : stats.buyers === 3 ? '🥈 You unlocked: LIFETIME PREMIUM!' : stats.buyers === 10 ? '🥇 You unlocked: AMBASSADOR + AED 50 cashback!' : ''}`);
+  alert(`🎉 Credited 1 buyer to your code!\n\nTotal buyers: ${stats.buyers}\n\n${stats.buyers === 1 ? '🥉 You unlocked: 1 month free Premium trial!' : stats.buyers === 3 ? '🥈 You unlocked: Locked Founder pricing!' : stats.buyers === 10 ? '🥇 You unlocked: AMBASSADOR + AED 50 cashback!' : ''}`);
   if (stats.buyers === 3 || stats.buyers === 10) {
-    // Award lifetime premium
+    // Award Founder-tier access as the reward — same manually-issued license key
+    // mechanism a paying Founder gets, just earned via referrals instead of payment.
+    // Pricing stays locked at AED 19/mo (no free-forever license — see PAYMENT_CONFIG).
     if (stats.buyers >= 3 && getLicenseStatus().tier === 'free') {
       localStorage.setItem('financeTracker_license', 'JAMES-PANCHAL-FOUNDER-2026'); // founder access as reward
       updatePremiumUI();
-      alert('✨ LIFETIME PREMIUM activated! You now have founder-level access.');
+      alert('✨ Founder pricing activated! You now have Founder-level access, locked at AED 19/mo.');
     }
   }
   renderReferral();
@@ -14058,7 +14286,7 @@ window.checkMyRewards = function(){
   msg += `• Signups via your code: ${stats.signups}\n`;
   msg += `• Buyers via your code: ${stats.buyers}\n\n`;
   if (stats.buyers >= 10) msg += '🥇 AMBASSADOR — earn AED 50 cashback!\n';
-  else if (stats.buyers >= 3) msg += '🥈 EARLY SUPPORTER — Lifetime Premium earned!\n';
+  else if (stats.buyers >= 3) msg += '🥈 EARLY SUPPORTER — Founder pricing locked in!\n';
   else if (stats.buyers >= 1) msg += '🥉 INVITER — 1 month free trial earned!\n';
   else msg += 'Share more to unlock rewards!\n';
   if (trial) {
@@ -14140,7 +14368,7 @@ function detectReferral(){
     }));
     setTimeout(() => {
       if (typeof showNudge === 'function') {
-        showNudge('🎁 You got a 7-day Premium trial!', `Invited by ${ref}. Enjoy Premium FREE for 7 days. Plus, get 10% off (AED 9 instead of AED 10) if you upgrade!`, 'open-ai-scan');
+        showNudge('🎁 You got a 7-day Premium trial!', `Invited by ${ref}. Enjoy Premium FREE for 7 days. Plus, get 10% off (AED 17 instead of AED 19) if you upgrade!`, 'open-ai-scan');
       }
     }, 3000);
   }
@@ -15172,17 +15400,19 @@ function exportPDFReport(){
 // ========================================================
 // Configurable from admin or hardcoded. Reads from localStorage so admin can change live.
 
+// NOTE: this used to be a separate "FREE for first 10 signups → lifetime license"
+// promo system with its own text that overwrote the Founder banner's DOM nodes
+// (offerTitle/offerSubtitle) on every render — a second, contradicting source of
+// truth for the same banner. It's now repointed at the same Founder numbers the
+// Premium modal already uses (getFounderVerifiedCount()/founderCap), so if this
+// ever renders it says the same thing that's already hardcoded in the banner's
+// HTML, instead of clobbering it with old "FREE for life" copy.
 const DEFAULT_OFFER = {
   enabled: true,
-  type: 'free_for_first_10',
-  title: '🎁 FREE for the first 10 signups!',
-  subtitle: 'Sign up + message <strong>"free"</strong> to James → get Premium FREE for life.',
-  discountedPrice: 10,
-  originalPrice: 10,
-  maxSpots: 10,
-  endDate: null,
-  promoCode: 'FREE10',
-  contactInstructions: 'After signing up, message "free" via 💬 Feedback button or WhatsApp James directly.'
+  type: 'founder_launch',
+  title: '🎉 Founder Launch Pricing',
+  subtitle: 'Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed.',
+  endDate: null
 };
 
 function getActiveOffer(){
@@ -15195,25 +15425,18 @@ function getActiveOffer(){
 
 function getOfferStats(){
   // Returns { spotsUsed, spotsRemaining, endsIn (ms) }
+  // Single source of truth for "founder spots left": the same
+  // getFounderVerifiedCount()/founderCap the Premium modal uses — see openPremiumModal().
   const offer = getActiveOffer();
-  // Try to read from purchase count (if admin data is loaded)
-  let spotsUsed = 0;
-  try {
-    const purchases = (typeof adminCachedData !== 'undefined' && adminCachedData.purchases) || [];
-    spotsUsed = purchases.filter(p => {
-      const amt = parseFloat(p.amount) || 0;
-      return amt <= offer.discountedPrice + 0.5; // small tolerance
-    }).length;
-  } catch(e){}
-  // Fallback: read from localStorage
-  spotsUsed = Math.max(spotsUsed, parseInt(localStorage.getItem('mg_offer_spots_used') || '0'));
-
-  const spotsRemaining = Math.max(0, offer.maxSpots - spotsUsed);
+  const config = getPaymentConfig();
+  const spotsUsed = (typeof getFounderVerifiedCount === 'function') ? getFounderVerifiedCount() : 0;
+  const maxSpots = config.pricing.founderCap;
+  const spotsRemaining = Math.max(0, maxSpots - spotsUsed);
   let endsIn = null;
   if (offer.endDate) {
     endsIn = Math.max(0, new Date(offer.endDate).getTime() - Date.now());
   }
-  return { spotsUsed, spotsRemaining, endsIn };
+  return { spotsUsed, spotsRemaining, endsIn, maxSpots };
 }
 
 function shouldShowOffer(){
@@ -15234,27 +15457,11 @@ function renderOfferBanner(){
     banner.style.display = 'none';
     return;
   }
-  const offer = getActiveOffer();
   const stats = getOfferStats();
-  document.getElementById('offerTitle').textContent = offer.title;
-  document.getElementById('offerSubtitle').innerHTML = offer.subtitle;
-
-  // Show spots or countdown
-  const countdown = document.getElementById('offerCountdown');
-  if (stats.endsIn !== null && stats.endsIn > 0) {
-    const hrs = Math.floor(stats.endsIn / 3600000);
-    const mins = Math.floor((stats.endsIn % 3600000) / 60000);
-    const secs = Math.floor((stats.endsIn % 60000) / 1000);
-    countdown.innerHTML = `
-      <div class="label">Ends in</div>
-      <div>${hrs > 24 ? Math.floor(hrs/24)+'d '+(hrs%24)+'h' : hrs+'h '+mins+'m'}</div>
-    `;
-  } else {
-    countdown.innerHTML = `
-      <div class="label">Spots left</div>
-      <div>${stats.spotsRemaining} / ${offer.maxSpots}</div>
-    `;
-  }
+  const titleEl = document.getElementById('offerTitle');
+  const subtitleEl = document.getElementById('offerSubtitle');
+  if (titleEl) titleEl.textContent = '🎉 Founder Launch Pricing';
+  if (subtitleEl) subtitleEl.innerHTML = `Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed. <strong>${stats.spotsRemaining} / ${stats.maxSpots} spots left.</strong>`;
   banner.style.display = 'flex';
 }
 
@@ -15273,80 +15480,23 @@ if (typeof refreshAll === 'function') {
 // Initial render
 setTimeout(renderOfferBanner, 800);
 
-// Hook into premium modal to apply offer pricing
-const _origOpenPremium = openPremiumModal;
-openPremiumModal = function(featureHighlight){
-  _origOpenPremium(featureHighlight);
-  setTimeout(function(){
-    if (shouldShowOffer()) {
-      var offer = getActiveOffer();
-      var stats = getOfferStats();
-      var main = document.getElementById('premiumPriceMain');
-      var sub = document.getElementById('premiumPriceSub');
-      // Show "FREE for first 10" banner instead of discount
-      if (main) {
-        main.innerHTML = '<span style="background:linear-gradient(135deg,#10b981,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">🎁 FREE</span> <small style="font-size:14px;color:#94a3b8">(was AED 10)</small>';
-      }
-      if (sub) {
-        sub.innerHTML = '<strong style="color:#10b981;font-size:13px">🎁 First 10 signups get Premium FREE for life!</strong><br>' +
-          '<small style="color:#cbd5e1;line-height:1.5;display:block;margin-top:6px">Only <strong>' + stats.spotsRemaining + '</strong> spots left.<br>' +
-          '<strong>How to claim:</strong> Sign up → Tap 💬 Feedback → Send message "<strong>free</strong>"<br>' +
-          'James will email you a free lifetime license within 24 hours.</small>';
-      }
-      // Also add a prominent "How to claim FREE" button if not already premium
-      var modalContent = document.getElementById('modalContent');
-      if (modalContent && !document.getElementById('claimFreeBtn')) {
-        var btn = document.createElement('button');
-        btn.id = 'claimFreeBtn';
-        btn.className = 'premium-buy-btn';
-        btn.style.cssText = 'background:linear-gradient(135deg,#10b981,#3b82f6);color:white;border:none;padding:14px 24px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;width:100%;margin-top:8px;font-family:inherit;min-height:50px';
-        btn.innerHTML = '💬 Claim FREE access — message "free" now';
-        btn.onclick = function(){
-          closeModal();
-          if (typeof openFeedbackModal === 'function') {
-            openFeedbackModal();
-            // Auto-fill the message
-            setTimeout(function(){
-              var ta = document.getElementById('feedbackText');
-              if (ta) {
-                ta.value = 'free\n\nI would like to claim my FREE Premium lifetime license as one of the first 10 signups!';
-                // Auto-select "Other" type
-                var otherBtn = document.querySelector('.feedback-type-btn[data-type=other]');
-                if (otherBtn) otherBtn.click();
-              }
-            }, 200);
-          }
-        };
-        // Insert after price display
-        var price = modalContent.querySelector('.premium-price');
-        if (price && price.parentNode) {
-          price.parentNode.insertBefore(btn, price.nextSibling);
-        }
-      }
-    }
-  }, 100);
-};
-
 // Admin function: configure offers (called from admin dashboard)
+// Admin toggle for the Founder banner. Spots-left is always read live from
+// getFounderVerifiedCount()/founderCap (see getOfferStats()) — not admin-edited here —
+// so this can't drift out of sync with the real Founder count shown in the Premium modal.
 window.configureOffer = function(){
   var offer = getActiveOffer();
   var newOffer = {
-    enabled: confirm('Enable the offer banner?\n\n(Click OK = ON, Cancel = OFF)\n\nCurrent: ' + (offer.enabled ? 'ON' : 'OFF')) ? true : false
+    enabled: confirm('Enable the Founder launch banner?\n\n(Click OK = ON, Cancel = OFF)\n\nCurrent: ' + (offer.enabled ? 'ON' : 'OFF')) ? true : false,
+    type: offer.type
   };
   if (!newOffer.enabled) {
     localStorage.setItem('mg_active_offer', JSON.stringify({...offer, enabled: false}));
-    alert('✅ Offer disabled.');
+    alert('✅ Banner disabled.');
     renderOfferBanner();
     return;
   }
-  newOffer.title = prompt('Banner title:', offer.title) || offer.title;
-  newOffer.subtitle = prompt('Banner subtitle:', offer.subtitle) || offer.subtitle;
-  newOffer.discountedPrice = parseFloat(prompt('Discounted price (AED):', offer.discountedPrice)) || offer.discountedPrice;
-  newOffer.originalPrice = parseFloat(prompt('Original price (AED):', offer.originalPrice)) || offer.originalPrice;
-  newOffer.maxSpots = parseInt(prompt('Max spots (or 99999 for unlimited):', offer.maxSpots)) || offer.maxSpots;
-  newOffer.promoCode = prompt('Promo code (shown in modal):', offer.promoCode) || offer.promoCode;
-  newOffer.type = offer.type;
-  const useEndDate = confirm('Add an end date?\n\nOK = Yes (you\'ll enter date)\nCancel = No (use spots-only)');
+  const useEndDate = confirm('Add an end date?\n\nOK = Yes (you\'ll enter date)\nCancel = No (runs until Founder spots fill up)');
   if (useEndDate) {
     const dateStr = prompt('End date (YYYY-MM-DD HH:MM, e.g., 2026-06-30 23:59):', '');
     if (dateStr) {
@@ -16956,7 +17106,7 @@ function renderAdminOverview(){
           <thead><tr><th>Rank</th><th>Code</th><th>Signups</th><th>Purchases</th><th>Tier Earned</th></tr></thead>
           <tbody>
             ${topReferrers.map(([code, st], i) => {
-              const tier = st.purchases >= 10 ? '🥇 Ambassador (AED 50)' : st.purchases >= 3 ? '🥈 Early Supporter (Lifetime)' : st.purchases >= 1 || st.signups >= 1 ? '🥉 Inviter (1mo trial)' : '—';
+              const tier = st.purchases >= 10 ? '🥇 Ambassador (AED 50)' : st.purchases >= 3 ? '🥈 Early Supporter (Founder pricing)' : st.purchases >= 1 || st.signups >= 1 ? '🥉 Inviter (1mo trial)' : '—';
               return `<tr>
                 <td>#${i+1}</td>
                 <td><code style="color:#c4b5fd">${code}</code></td>
@@ -17010,8 +17160,8 @@ function renderAdminReferrals(){
     let tier = '';
     let owed = '';
     if (r.purchases >= 25) { tier = '💎 Legend'; owed = 'AED 200 cashback (+Legend perks)'; }
-    else if (r.purchases >= 10) { tier = '🥇 Ambassador'; owed = 'AED 50 cashback + lifetime + badge'; }
-    else if (r.purchases >= 3) { tier = '🥈 Early Supporter'; owed = 'Lifetime Premium + badge'; }
+    else if (r.purchases >= 10) { tier = '🥇 Ambassador'; owed = 'AED 50 cashback + Founder pricing + badge'; }
+    else if (r.purchases >= 3) { tier = '🥈 Early Supporter'; owed = 'Founder pricing locked in + badge'; }
     else { tier = '🥉 Inviter'; owed = '1 month trial + AI translation'; }
     return { ...r, tier, owed };
   });
@@ -17086,7 +17236,7 @@ function renderAdminReferrals(){
 function getRewardText(buyers){
   if (buyers >= 25) return '💎 AED 200 cashback';
   if (buyers >= 10) return '🥇 AED 50 cashback';
-  if (buyers >= 3) return '🥈 Lifetime Premium';
+  if (buyers >= 3) return '🥈 Founder pricing';
   if (buyers >= 1) return '🥉 1mo trial + badge';
   return '—';
 }
@@ -17832,16 +17982,16 @@ Best,
 James Panchal
 MoneyGlow AI
 
-P.S. If you find it useful, AED 10 one-time unlocks premium features (Face ID, AI chat, encrypted backup). No subscriptions, ever.`
+P.S. If you find it useful, Premium is AED 19/month and unlocks Face ID, real AI chat, and encrypted backup. Cancel anytime.`
   },
   promo: {
-    name: '🎁 Premium Promo',
-    subject: 'Limited: 24-hour Premium discount for you 🎁',
+    name: '🎁 Founder Pricing Promo',
+    subject: 'Founder spots are limited — lock AED 19/month 🎉',
     body: `Hey {name},
 
-Quick one — I'm offering MoneyGlow AI Premium at AED 9 (10% off) for the next 24 hours.
+Quick one — I'm opening a limited number of Founder spots for MoneyGlow AI Premium.
 
-Premium unlocks:
+Founder pricing unlocks:
 🔒 Face ID lock for your finances
 📦 Encrypted backup (never lose your data)
 🌐 Real AI chat with personalized advice
@@ -17849,9 +17999,9 @@ Premium unlocks:
 📄 PDF financial reports
 🎙️ Voice input
 
-One payment. Lifetime access. No subscriptions.
+AED 19/month, locked in for as long as you stay subscribed — the price only goes up once Founder spots run out.
 
-Buy here: [YOUR_GUMROAD_LINK]
+Claim your spot: [YOUR_LINK]
 
 — James`
   },
@@ -17904,7 +18054,7 @@ Reward for you:
 
 Thank you genuinely. As an indie founder, every share matters.
 
-Want to push for Ambassador status (10 buyers = AED 50 cashback + lifetime + direct chat with me)? You're already part of the way there. 💪
+Want to push for Ambassador status (10 buyers = AED 50 cashback + Founder pricing + direct chat with me)? You're already part of the way there. 💪
 
 — James`
   },
@@ -18269,7 +18419,7 @@ function checkMilestones(){
         priority: 'critical',
         icon: '💎',
         title: 'NEW LEGEND TIER!',
-        message: `Referrer ${code} hit 25+ buyers — they earned LIFETIME + AED 200 cashback!`,
+        message: `Referrer ${code} hit 25+ buyers — they earned Founder pricing + AED 200 cashback!`,
         action: 'Pay them ASAP'
       });
     } else if (st.purchases >= 10 && !seen['ambassador_' + code]) {
@@ -18278,7 +18428,7 @@ function checkMilestones(){
         priority: 'high',
         icon: '🥇',
         title: 'New Ambassador!',
-        message: `Referrer ${code} hit 10 buyers — earned LIFETIME + AED 50 cashback`,
+        message: `Referrer ${code} hit 10 buyers — earned Founder pricing + AED 50 cashback`,
         action: 'Pay cashback'
       });
     } else if (st.purchases >= 3 && !seen['supporter_' + code]) {
@@ -18287,8 +18437,8 @@ function checkMilestones(){
         priority: 'medium',
         icon: '🥈',
         title: 'New Early Supporter!',
-        message: `Referrer ${code} hit 3 buyers — earned LIFETIME Premium`,
-        action: 'Send lifetime license'
+        message: `Referrer ${code} hit 3 buyers — earned Founder pricing locked in`,
+        action: 'Send Founder license'
       });
     }
   });
