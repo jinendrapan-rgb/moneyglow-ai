@@ -11894,49 +11894,27 @@ function isPremium(){
 function updatePremiumUI(){
   const status = getLicenseStatus();
 
-  // The More screen's Settings card is the surface that actually exists today —
-  // premiumToolbarBtn/lockToolbarBtn/backupToolbarBtn below are pre-redesign ids
-  // that are no longer in the markup, which is why this function used to return
-  // immediately and do nothing at all.
+  // The More screen's Settings card is the only premium surface in the markup.
+  // This function used to open with getElementById('premiumToolbarBtn') followed
+  // by `if (!btn) return;` — that id, plus lockToolbarBtn and backupToolbarBtn,
+  // were removed by the mobile navigation redesign, so every call returned
+  // immediately and the premium state was never displayed anywhere. Each branch
+  // those dead blocks carried is preserved here, on the element that exists.
   const sub = document.getElementById('settingsCardSubtitle');
-  if (sub) {
-    sub.textContent = status.owner ? '🛠 Owner Mode — all unlocked'
-      : status.tier === 'free' ? 'Premium & Account'
-      : status.label + ' active';
-  }
-
-  const btn = document.getElementById('premiumToolbarBtn');
-  if (!btn) return;
+  if (!sub) return;
 
   if (status.owner) {
-    btn.innerHTML = '🛠 Owner Mode';
-    btn.className = 'premium-btn active-premium';
+    sub.textContent = '🛠 Owner Mode — all unlocked';
   } else if (status.tier === 'founder') {
-    btn.innerHTML = '✨ Founder Access';
-    btn.className = 'premium-btn active-premium';
+    sub.textContent = '✨ Founder Access';
   } else if (status.tier === 'premium') {
-    btn.innerHTML = '✅ Premium Active';
-    btn.className = 'premium-btn active-premium';
+    sub.textContent = '✅ Premium active';
   } else if (typeof hasActiveFriendTrial === 'function' && hasActiveFriendTrial()) {
     const trial = getFriendDiscount();
     const daysLeft = Math.ceil((trial.trialExpiry - Date.now()) / (24*60*60*1000));
-    btn.innerHTML = `🎁 Trial: ${daysLeft}d left`;
-    btn.className = 'premium-btn active-premium';
+    sub.textContent = `🎁 Trial: ${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
   } else {
-    btn.innerHTML = '🔓 Unlock Premium';
-    btn.className = 'premium-btn';
-  }
-
-  // Update lock/backup button labels
-  const lockBtn = document.getElementById('lockToolbarBtn');
-  const backupBtn = document.getElementById('backupToolbarBtn');
-  if (lockBtn && backupBtn) {
-    backupBtn.innerHTML = '☁ <span class="mg-btn-label">Backup</span>';
-    if (isPremium()) {
-      lockBtn.innerHTML = '🔒 <span class="mg-btn-label">Lock</span>';
-    } else {
-      lockBtn.innerHTML = '🔒 <span class="mg-btn-label">Lock</span> <span class="premium-status-badge" style="font-size:9px;padding:1px 5px;margin-left:4px">PRO</span>';
-    }
+    sub.textContent = 'Premium & Account';
   }
 }
 
