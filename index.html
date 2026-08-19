@@ -5124,7 +5124,9 @@ let data = {
 // single keystroke, so a number like 1000 cannot be typed in one go. These
 // helpers let a render defer itself until the field is no longer focused.
 const _mgPendingRenders = new Map();
-let _mgLastPointerDown = 0;
+let _mgPointerDown = false;
+let _mgFlushTimer = null;
+let _mgFlushRetries = 0;
 
 function _mgIsTextEntry(el){
   if (!el) return false;
@@ -5145,11 +5147,22 @@ function mgDeferRender(containerId, renderFn){
   return true;
 }
 
+// One timer only. Stacked timers made flush timing depend on which chain won
+// the race, which is exactly the kind of non-determinism a tap must not sit on.
+function _mgScheduleFlush(delay){
+  clearTimeout(_mgFlushTimer);
+  _mgFlushTimer = setTimeout(_mgFlushPendingRenders, delay);
+}
+
 function _mgFlushPendingRenders(){
-  if (!_mgPendingRenders.size) return;
-  // A tap still in flight (pointerdown -> click) has to land on the existing
-  // DOM node, so hold the rebuild back until that click has been dispatched.
-  if (Date.now() - _mgLastPointerDown < 500){ setTimeout(_mgFlushPendingRenders, 250); return; }
+  if (!_mgPendingRenders.size){ _mgFlushRetries = 0; return; }
+  // A tap in flight (pointerdown -> click) has to land on the existing DOM
+  // node, so never rebuild while a pointer is still down. A pointerup can be
+  // lost though (gesture stolen, pointer capture released), so stop holding
+  // after ~2s rather than leaving the row stale forever.
+  if (_mgPointerDown && _mgFlushRetries < 12){ _mgFlushRetries++; _mgScheduleFlush(150); return; }
+  _mgFlushRetries = 0;
+  _mgPointerDown = false;
   Array.from(_mgPendingRenders.keys()).forEach(id => {
     const c = document.getElementById(id);
     if (c && _mgIsTextEntry(document.activeElement) && c.contains(document.activeElement)) return;
@@ -5159,8 +5172,12 @@ function _mgFlushPendingRenders(){
   });
 }
 
-document.addEventListener('pointerdown', () => { _mgLastPointerDown = Date.now(); }, true);
-document.addEventListener('focusout', () => { setTimeout(_mgFlushPendingRenders, 60); }, true);
+document.addEventListener('pointerdown',   () => { _mgPointerDown = true; _mgFlushRetries = 0; }, true);
+document.addEventListener('pointerup',     () => { _mgPointerDown = false; }, true);
+document.addEventListener('pointercancel', () => { _mgPointerDown = false; }, true);
+// Bubble phase: by the time this runs, the tapped control's own handler is done.
+document.addEventListener('click',    () => _mgScheduleFlush(0));
+document.addEventListener('focusout', () => _mgScheduleFlush(250), true);
 
 function renderIncome(){
   if (mgDeferRender('incomeList', renderIncome)) return;
@@ -6493,7 +6510,7 @@ function loadData(){
   if (!raw) { alert('No saved data found'); return; }
   try {
     data = JSON.parse(raw);
-    if (!data.transactions) data.transactions = []; // migrate old saves
+    mgApplyDataDefaults();   // a save from an older version is missing later phases' keys
     renderAll();
     calc();
   } catch(e){ alert('Could not load saved data'); }
@@ -6541,48 +6558,58 @@ const saved = localStorage.getItem('financeTracker_v2');
 if (saved) {
   try { data = JSON.parse(saved); } catch(e){}
 }
-// Add new fields for Essentials Pack if missing
-if (!data.goals) data.goals = [
-  { name: 'Emergency Buffer', target: 2000, current: 0 },
-  { name: '3-Month Emergency Fund', target: 25000, current: 0 }
-];
-if (!data.assets) data.assets = [
-  { name: 'Bank Account', amount: 0 },
-  { name: 'Savings', amount: 0 }
-];
-if (!data.notifications) data.notifications = {
-  billReminders: false,
-  monthlyCheckin: false,
-  dailyMotivation: false,
-  overdueAlerts: false,
-  lastChecked: 0
-};
-if (!data.subscriptions) data.subscriptions = [
-  { name: 'Netflix', amount: 39, cycle: 'monthly', status: 'active', notes: '' },
-  { name: 'Spotify', amount: 22, cycle: 'monthly', status: 'active', notes: '' },
-  { name: 'Gym membership', amount: 250, cycle: 'monthly', status: 'wasted', notes: 'I haven\'t been in 3 months' }
-];
+// Every key added by a later phase is defaulted here rather than inline at the load
+// site, because `data` is replaced wholesale in three places — first load, the Load
+// button, and Backup Restore. Only the first one used to run these defaults, so
+// restoring a backup taken before a phase shipped left its keys undefined and threw
+// (e.g. computeMissions() reading data.usageFlags.triedDecisionLab).
+function mgApplyDataDefaults(){
+  // Add new fields for Essentials Pack if missing
+  if (!data.goals) data.goals = [
+    { name: 'Emergency Buffer', target: 2000, current: 0 },
+    { name: '3-Month Emergency Fund', target: 25000, current: 0 }
+  ];
+  if (!data.assets) data.assets = [
+    { name: 'Bank Account', amount: 0 },
+    { name: 'Savings', amount: 0 }
+  ];
+  if (!data.notifications) data.notifications = {
+    billReminders: false,
+    monthlyCheckin: false,
+    dailyMotivation: false,
+    overdueAlerts: false,
+    lastChecked: 0
+  };
+  if (!data.subscriptions) data.subscriptions = [
+    { name: 'Netflix', amount: 39, cycle: 'monthly', status: 'active', notes: '' },
+    { name: 'Spotify', amount: 22, cycle: 'monthly', status: 'active', notes: '' },
+    { name: 'Gym membership', amount: 250, cycle: 'monthly', status: 'wasted', notes: 'I haven\'t been in 3 months' }
+  ];
 
-// Phase 8 — new inputs the Financial Twin needs that nothing else in the app captures.
-if (!data.household) data.household = { adults: 1, children: 0, notes: '' };
-if (!data.plannedPurchases) data.plannedPurchases = [];
-if (!data.investments) data.investments = { monthlyContribution: 0, notes: '' };
-if (!data.twinTargets) data.twinTargets = { debtFreeDate: '', financialFreedomDate: '' };
+  // Phase 8 — new inputs the Financial Twin needs that nothing else in the app captures.
+  if (!data.household) data.household = { adults: 1, children: 0, notes: '' };
+  if (!data.plannedPurchases) data.plannedPurchases = [];
+  if (!data.investments) data.investments = { monthlyContribution: 0, notes: '' };
+  if (!data.twinTargets) data.twinTargets = { debtFreeDate: '', financialFreedomDate: '' };
 
-// Phase 15 — lightweight, one-way usage flags for Missions/Achievements that no other
-// computed value already captures (e.g. "has the user ever opened the Decision Lab").
-// Real usage tracking, set once at the real call site — never inferred or guessed.
-if (!data.usageFlags) data.usageFlags = { triedDecisionLab: false, checkedInWeeklyReview: false };
+  // Phase 15 — lightweight, one-way usage flags for Missions/Achievements that no other
+  // computed value already captures (e.g. "has the user ever opened the Decision Lab").
+  // Real usage tracking, set once at the real call site — never inferred or guessed.
+  if (!data.usageFlags) data.usageFlags = { triedDecisionLab: false, checkedInWeeklyReview: false };
 
-// Phase 16 — 'auto' means the app picks Debt Freedom vs Wealth Building mode from the
-// real current total debt; a user can pin one mode instead purely to preview its framing,
-// which is why this is a real stored choice and not silently inferred every time.
-if (!data.wealthModeOverride) data.wealthModeOverride = 'auto';
+  // Phase 16 — 'auto' means the app picks Debt Freedom vs Wealth Building mode from the
+  // real current total debt; a user can pin one mode instead purely to preview its framing,
+  // which is why this is a real stored choice and not silently inferred every time.
+  if (!data.wealthModeOverride) data.wealthModeOverride = 'auto';
 
-// Phase 17 — user-entered preference notes injected into the Real AI system prompt only
-// (buildAIContext()). Never affects the offline rule-based Copilot, which has no prompt to
-// inject into.
-if (!data.aiMemory) data.aiMemory = [];
+  // Phase 17 — user-entered preference notes injected into the Real AI system prompt only
+  // (buildAIContext()). Never affects the offline rule-based Copilot, which has no prompt to
+  // inject into.
+  if (!data.aiMemory) data.aiMemory = [];
+  if (!data.transactions) data.transactions = [];
+}
+
+mgApplyDataDefaults();
 
 // Score history consts must be declared before this point — renderAll() below is the
 // app's actual FIRST bootstrap call and reaches computeHealthScore() immediately via
@@ -10266,6 +10293,7 @@ async function doRestore(){
     if (!parsed.data || !parsed.data.debts) throw new Error('Invalid backup format');
     if (!confirm('Restore this backup?\n\nCreated: ' + (parsed.created || 'unknown') + '\n\nYour current data will be REPLACED.')) return;
     data = parsed.data;
+    mgApplyDataDefaults();   // backups predating a phase are missing that phase's keys
     if (parsed.collapse) localStorage.setItem('financeTracker_collapse', parsed.collapse);
     saveAuto();
     renderAll();
