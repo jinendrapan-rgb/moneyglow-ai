@@ -5118,7 +5118,52 @@ let data = {
 };
 
 // ---------- RENDER ----------
+// ---------- TYPING FOCUS GUARD ----------
+// Rebuilding a list's innerHTML while the user is typing inside it destroys the
+// focused <input>. On mobile that closes the on-screen keyboard after every
+// single keystroke, so a number like 1000 cannot be typed in one go. These
+// helpers let a render defer itself until the field is no longer focused.
+const _mgPendingRenders = new Map();
+let _mgLastPointerDown = 0;
+
+function _mgIsTextEntry(el){
+  if (!el) return false;
+  if (el.tagName === 'TEXTAREA') return true;
+  if (el.tagName !== 'INPUT') return false;
+  const t = (el.type || 'text').toLowerCase();
+  return !['checkbox','radio','button','submit','reset','file','range','color','image'].includes(t);
+}
+
+// Call at the top of any function that replaces a container's innerHTML.
+// Returns true when the caller should skip the rebuild for now.
+function mgDeferRender(containerId, renderFn){
+  const el = document.activeElement;
+  if (!_mgIsTextEntry(el)) return false;
+  const c = document.getElementById(containerId);
+  if (!c || !c.contains(el)) return false;
+  _mgPendingRenders.set(containerId, renderFn);
+  return true;
+}
+
+function _mgFlushPendingRenders(){
+  if (!_mgPendingRenders.size) return;
+  // A tap still in flight (pointerdown -> click) has to land on the existing
+  // DOM node, so hold the rebuild back until that click has been dispatched.
+  if (Date.now() - _mgLastPointerDown < 500){ setTimeout(_mgFlushPendingRenders, 250); return; }
+  Array.from(_mgPendingRenders.keys()).forEach(id => {
+    const c = document.getElementById(id);
+    if (c && _mgIsTextEntry(document.activeElement) && c.contains(document.activeElement)) return;
+    const fn = _mgPendingRenders.get(id);
+    _mgPendingRenders.delete(id);
+    try { fn(); } catch(e){ console.warn('Deferred render failed for ' + id, e); }
+  });
+}
+
+document.addEventListener('pointerdown', () => { _mgLastPointerDown = Date.now(); }, true);
+document.addEventListener('focusout', () => { setTimeout(_mgFlushPendingRenders, 60); }, true);
+
 function renderIncome(){
+  if (mgDeferRender('incomeList', renderIncome)) return;
   const list = document.getElementById('incomeList');
   list.innerHTML = data.income.map((it, i) => `
     <div class="data-row">
@@ -5135,6 +5180,7 @@ function renderIncome(){
 }
 
 function renderExpense(){
+  if (mgDeferRender('expenseList', renderExpense)) return;
   const list = document.getElementById('expenseList');
   list.innerHTML = data.expenses.map((it, i) => {
     const monthly = it.cycle > 0 ? it.amount / it.cycle : 0;
@@ -5161,6 +5207,7 @@ function renderExpense(){
 }
 
 function renderDebt(){
+  if (mgDeferRender('debtList', renderDebt)) return;
   const list = document.getElementById('debtList');
   list.innerHTML = data.debts.map((d, i) => {
     const pay = parseFloat(d.payThisMonth) || 0;
@@ -5260,6 +5307,7 @@ function renderDebt(){
 }
 
 function renderLog(){
+  if (mgDeferRender('logList', renderLog)) return;
   const list = document.getElementById('logList');
   list.innerHTML = data.log.map((l, i) => `
     <div class="data-row">
@@ -5687,6 +5735,47 @@ function mgImportSelected(transactions){
 // ============ 🤖 AI SMART PARSER (OCR + PDF) ============
 // ========================================================
 
+// ── Image pre-processing for OCR ─────────────────────────
+// Tesseract is dramatically more accurate on large, high-contrast, dark-on-light
+// text. Phone screenshots are usually small and often dark-mode, which is the
+// main reason raw screenshots used to yield only a few stray numbers.
+async function mgPreprocessImage(file){
+  let bmp;
+  try { bmp = await createImageBitmap(file); } catch(e){ return file; }
+  const maxSide = Math.max(bmp.width, bmp.height);
+  let scale = Math.min(3, Math.max(1, 1800 / maxSide));
+  // Keep the canvas within a size every mobile browser can allocate.
+  const maxPixels = 24e6;
+  if (bmp.width * bmp.height * scale * scale > maxPixels){
+    scale = Math.sqrt(maxPixels / (bmp.width * bmp.height));
+  }
+  const c = document.createElement('canvas');
+  c.width  = Math.max(1, Math.round(bmp.width  * scale));
+  c.height = Math.max(1, Math.round(bmp.height * scale));
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(bmp, 0, 0, c.width, c.height);
+  let img;
+  try { img = ctx.getImageData(0, 0, c.width, c.height); } catch(e){ return c; }
+  const d = img.data;
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4){
+    const g = 0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2];
+    d[i] = d[i+1] = d[i+2] = g;
+    sum += g;
+  }
+  const mean = sum / (d.length / 4);
+  const invert = mean < 110; // dark-mode banking app screenshot
+  for (let i = 0; i < d.length; i += 4){
+    let g = invert ? 255 - d[i] : d[i];
+    g = (g - 128) * 1.6 + 128;
+    d[i] = d[i+1] = d[i+2] = g < 0 ? 0 : g > 255 ? 255 : g;
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
 // ── Image OCR via Tesseract.js ───────────────────────────
 async function mgParseImage(file, mode){
   const modalId = mode === 'debt' ? 'mg-debt-modal' : 'mg-statement-modal';
@@ -5696,8 +5785,10 @@ async function mgParseImage(file, mode){
   setStatus('<div style="color:#a5b4fc;font-size:13px;text-align:center;padding:16px">🔍 Loading OCR engine… (first time may take 10–15s)</div>');
   try {
     await mgLoadTesseract();
+    setStatus('<div style="color:#a5b4fc;font-size:13px;text-align:center;padding:16px">🖼️ Sharpening image…</div>');
+    const source = await mgPreprocessImage(file);
     setStatus('<div style="color:#a5b4fc;font-size:13px;text-align:center;padding:16px">🔍 Reading text from image…</div>');
-    const result = await Tesseract.recognize(file, 'eng', {
+    const result = await Tesseract.recognize(source, 'eng', {
       logger: m => {
         if(m.status === 'recognizing text'){
           const pct = Math.round((m.progress||0)*100);
@@ -5714,6 +5805,27 @@ async function mgParseImage(file, mode){
 }
 
 // ── PDF text extraction via PDF.js ──────────────────────
+// PDF.js returns positioned text runs, not lines. Joining every run on a page
+// with a space collapses the whole page into one line, which made the line-based
+// parser below see a single "transaction" per page. Rebuild real rows by
+// grouping runs that share a baseline, then ordering them left to right.
+function mgPdfItemsToLines(items){
+  const rows = new Map();
+  items.forEach(it => {
+    if (!it.str || !it.str.trim()) return;
+    const y = it.transform[5];
+    const key = Math.round(y / 3); // tolerate sub-pixel baseline drift
+    if (!rows.has(key)) rows.set(key, []);
+    rows.get(key).push(it);
+  });
+  return Array.from(rows.entries())
+    .sort((a, b) => b[0] - a[0])            // PDF y grows upward: top row first
+    .map(([, runs]) => runs
+      .sort((a, b) => a.transform[4] - b.transform[4])
+      .map(r => r.str).join(' ').replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+}
+
 async function mgParsePDF(file, mode){
   const modalId = mode === 'debt' ? 'mg-debt-modal' : 'mg-statement-modal';
   const statusEl = document.getElementById(modalId + '-status');
@@ -5724,18 +5836,90 @@ async function mgParsePDF(file, mode){
     await mgLoadPDFJS();
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-    let fullText = '';
+    const lines = [];
     for(let p = 1; p <= pdf.numPages; p++){
       setStatus(`<div style="color:#a5b4fc;font-size:13px;text-align:center;padding:16px">📄 Reading PDF page ${p} of ${pdf.numPages}…</div>`);
       const page = await pdf.getPage(p);
       const content = await page.getTextContent();
-      fullText += content.items.map(i => i.str).join(' ') + '\n';
+      lines.push(...mgPdfItemsToLines(content.items));
     }
+    const fullText = lines.join('\n');
     if(!fullText.trim()) throw new Error('This PDF appears to be a scanned image. Try uploading a screenshot instead.');
     mgParseExtractedText(fullText, mode, modalId);
   } catch(err){
     setStatus(`<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px">❌ <strong>PDF read failed:</strong> ${err.message}</div>`);
   }
+}
+
+// ========================================================
+// ====== SHARED TEXT → FINANCIAL FIELD EXTRACTION ========
+// ========================================================
+// The old parser matched every digit run on a line and then kept the *last*
+// one, which on a bank statement is the running balance, and on a screenshot is
+// whatever reference number happened to sit at the end of the row. These
+// helpers pull out dates, discard identifiers, and score each number on whether
+// it is actually formatted like money.
+
+const MG_MONTHS = 'jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec';
+const MG_DATE_RE = new RegExp(
+  '\\b(?:' +
+  '\\d{1,2}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{2,4}' +                   // 12/03/2024
+  '|\\d{4}[\\/\\-.]\\d{1,2}[\\/\\-.]\\d{1,2}' +                    // 2024-03-12
+  '|\\d{1,2}[\\s\\-](?:' + MG_MONTHS + ')[a-z]*[\\s\\-]?\\d{2,4}?' + // 12 Mar 2024
+  '|(?:' + MG_MONTHS + ')[a-z]*\\s\\d{1,2},?\\s?\\d{2,4}' +        // Mar 12, 2024
+  ')\\b', 'i');
+
+// Structural noise: never a transaction row.
+const MG_SKIP_LINE_RE = /^(?:page\s*\d|statement\b|account\s+(?:no|number|summary|statement|title)|iban\b|swift\b|bic\b|opening\s+balance|closing\s+balance|balance\s+(?:b|c)\/?f|brought\s+forward|carried\s+forward|(?:grand\s+|sub[\s-]?)?total\b|available\s+(?:balance|limit)|customer\s+(?:service|care)|please\b|thank\b|terms\b|conditions\b|generated\s+on|printed\s+on|currency\b|branch\b|statement\s+period|period\s+from|www\.|https?:)/i;
+
+// A column-header row names two or more columns and carries no digits.
+function mgIsHeaderRow(line){
+  const lc = line.toLowerCase();
+  const hits = ['date','description','narration','particulars','debit','credit','amount','balance','withdrawal','deposit','value date']
+    .filter(h => lc.includes(h)).length;
+  return hits >= 2 && !/\d/.test(line);
+}
+
+// Remove tokens that look like money but are identifiers.
+function mgStripIdentifiers(line){
+  return line
+    .replace(/[X*x•●]{2,}\s?\d{2,4}\b/g, ' ')                       // ****1234
+    .replace(/\b\d{4}\s?[X*x•●]{2,}\s?\d{2,4}\b/g, ' ')             // 4532 **** 1234
+    .replace(/\b[A-Z]{2}\d{2}[A-Z0-9]{10,30}\b/g, ' ')              // IBAN
+    .replace(/\b\d{1,2}:\d{2}(?::\d{2})?\s?(?:am|pm)?\b/gi, ' ')    // 14:32
+    // Only strip a reference token that actually looks like an identifier, i.e.
+    // it contains a digit — otherwise "CARD PAYMENT" loses its description.
+    .replace(/\b(?:ref|reference|txn|trn|trx|auth|approval|invoice|inv|receipt|a\/c|acct|account|card)\s*(?:no\.?|num(?:ber)?|#)?\s*[:#]?\s*(?=[A-Za-z0-9\-\/]*\d)[A-Za-z0-9][A-Za-z0-9\-\/]{5,}\b/gi, ' ')
+    .replace(/\b\d{9,}\b/g, ' ');                                   // long bare digit runs
+}
+
+// Returns [{ value, currencyFormatted, marker, negative }] in reading order.
+function mgFindAmounts(line){
+  const re = /(\()?\s*(-|\+)?\s*(?:AED|aed|AED\.|dhs?|DHS?|د\.إ|USD|usd|\$|EUR|eur|€|GBP|gbp|£|INR|inr|Rs\.?)?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+\.\d{1,2}|\d{1,7})\s*(CR|DR|Cr|Dr|cr|dr)?\s*(\))?/g;
+  const out = [];
+  let m;
+  while ((m = re.exec(line)) !== null){
+    const raw = m[3];
+    const value = parseFloat(raw.replace(/,/g, ''));
+    if (!isFinite(value)) continue;
+    const currencyFormatted = /,/.test(raw) || /\.\d{1,2}$/.test(raw);
+    // A bare 4-digit integer is far more often a year or a partial reference.
+    if (!currencyFormatted && value >= 1900 && value <= 2100) continue;
+    if (value <= 0) continue;
+    out.push({
+      value,
+      currencyFormatted,
+      marker: (m[4] || '').toUpperCase(),
+      negative: m[2] === '-' || (!!m[1] && !!m[5])
+    });
+  }
+  return out;
+}
+
+// Prefer properly formatted money over bare integers on the same line.
+function mgPreferMoney(cands){
+  const strong = cands.filter(c => c.currencyFormatted);
+  return strong.length ? strong : cands;
 }
 
 // ── Smart text → transactions parser ────────────────────
@@ -5751,91 +5935,100 @@ function mgParseExtractedText(text, mode, modalId){
     'citibank','hsbc','standard chartered','lloyds','barclays','wio','liv'
   ];
 
-  const incomeKeywords  = /salary|sal\b|payroll|dividend|interest credit|bonus|commission|refund|cashback|reversal|transfer in|received from|credit from/i;
-  const expenseKeywords = /purchase|payment|transfer out|sent to|paid to|pos |atm |withdrawal|debit|utility|bill|subscription|rent|grocery|supermarket|petrol|fuel/i;
+  const incomeKeywords  = /salary|payroll|dividend|interest\s+credit|bonus|commission|refund|cashback|reversal|transfer\s+in|inward|received\s+from|credit\s+from|deposit|received/i;
+  const expenseKeywords = /purchase|payment|transfer\s+out|outward|sent\s+to|paid\s+to|pos\b|atm\b|withdrawal|debit|utility|bill|subscription|rent|grocery|supermarket|petrol|fuel|fee|charge|charges|vat/i;
 
-  // ── DEBT MODE: smart grouping ────────────────────────────
+  const rawLines = text.split(/\n/).map(l => l.replace(/\s+/g,' ').trim()).filter(Boolean);
+
+  // ── DEBT MODE: labelled-field extraction ─────────────────
   if(mode === 'debt'){
-    // Find bank name in full text
+    // Labels checked in priority order — "credit limit" and "minimum due" must
+    // win before the looser "balance"/"amount due" outstanding patterns.
+    const FIELD_RULES = [
+      { key:'apr',         re:/(?:interest|profit|flat|reducing)\s*rate|\bapr\b|rate\s*(?:p\.?\s?a\.?|per\s*annum)|annual\s*percentage/i },
+      { key:'creditLimit', re:/credit\s*limit|total\s*limit|approved\s*limit|sanctioned\s*(?:amount|limit)/i },
+      { key:'emi',         re:/\bemi\b|monthly\s*(?:instal?l?ment|payment|repayment|due)|instal?l?ment\s*amount|minimum\s*(?:amount\s*)?due|min\.?\s*(?:amt\.?\s*)?due|minimum\s*payment/i },
+      { key:'outstanding', re:/(?:total\s*)?outstanding|principal|closing\s*balance|statement\s*balance|current\s*balance|total\s*(?:amount\s*)?due|amount\s*due|loan\s*amount|remaining\s*(?:balance|amount)?|balance\s*due|unpaid|\bbalance\b/i }
+    ];
+    // Lines that mention these must never be read as the outstanding balance.
+    const NOT_OUTSTANDING = /available|limit|opening|minimum|min\.?\s*due|paid\s*(?:amount|to\s*date)|interest\s*rate|\bapr\b/i;
+
+    function labelOf(lc){
+      for (const r of FIELD_RULES){
+        if (r.re.test(lc)){
+          if (r.key === 'outstanding' && NOT_OUTSTANDING.test(lc)) continue;
+          return r.key;
+        }
+      }
+      return '';
+    }
+
     let lenderName = '';
     const lowerText = text.toLowerCase();
     for(const b of BANKS){
       if(lowerText.includes(b)){ lenderName = b.replace(/\b\w/g,c=>c.toUpperCase()); break; }
     }
 
-    // Find all numbers, classify each as: outstanding, emi, apr, or noise
-    const lines = text.split(/\n/);
-    let outstanding = 0, emi = 0, apr = 0;
-    const debtEntries = []; // for multiple loans in one image
+    const debtEntries = [];
+    let cur = { outstanding:0, emi:0, apr:0, creditLimit:0 };
+    let pendingLabel = '';   // a label whose value sits on the following line
+    const hasAny = () => cur.outstanding || cur.emi || cur.apr || cur.creditLimit;
 
-    lines.forEach(line => {
-      const clean = line.trim();
-      if(!clean) return;
-      const lc = clean.toLowerCase();
+    rawLines.forEach(line => {
+      if (MG_SKIP_LINE_RE.test(line) && !/balance|outstanding|due/i.test(line)) return;
+      const lc = line.toLowerCase();
+      const stripped = mgStripIdentifiers(line).replace(MG_DATE_RE, ' ');
+      const cands = mgFindAmounts(stripped);
 
-      // Extract all numbers on this line
-      const nums = [...clean.matchAll(/([\d,]+\.?\d{0,2})/g)]
-        .map(m => parseFloat(m[1].replace(/,/g,'')))
-        .filter(n => n > 0);
-      if(!nums.length) return;
-
-      // Skip pure percentage lines (e.g. "10.89%", "Interest Rate: 10.89 %")
-      if(/^\s*[\d.,]+\s*%\s*$/.test(clean)) return;
-      if(nums.every(n => n < 30) && /%/.test(clean)) {
-        // Looks like an interest/APR line
-        apr = Math.max(apr, nums[0]);
-        return;
-      }
-
-      // Detect APR/interest rate lines
-      if(/interest rate|apr|profit rate|rate p\.?a|annual rate/i.test(lc)){
-        apr = nums[0] || apr;
-        return;
-      }
-
-      // Detect EMI/monthly instalment lines
-      if(/emi|monthly.*instal|instal.*monthly|monthly.*payment|payment.*month|due.*month|minimum.*due/i.test(lc)){
-        emi = Math.max(...nums.filter(n => n > 50)) || emi;
-        return;
-      }
-
-      // Detect outstanding/principal lines
-      if(/outstanding|principal|balance|total.*due|amount.*due|loan.*amount|remaining|current.*balance/i.test(lc)){
-        const big = nums.filter(n => n > 100);
-        if(big.length) outstanding = Math.max(outstanding, ...big);
-        return;
-      }
-
-      // Look for a new bank/lender on this line → new debt entry
+      // A lender heading starts a new debt once we already collected one.
       let lineLender = '';
-      for(const b of BANKS){
-        if(lc.includes(b)){ lineLender = b.replace(/\b\w/g,c=>c.toUpperCase()); break; }
+      for(const b of BANKS){ if(lc.includes(b)){ lineLender = b.replace(/\b\w/g,c=>c.toUpperCase()); break; } }
+      if (lineLender && lineLender !== lenderName && cur.outstanding > 0){
+        debtEntries.push({ name: lenderName || 'Loan', ...cur });
+        cur = { outstanding:0, emi:0, apr:0, creditLimit:0 };
       }
+      if (lineLender) lenderName = lineLender;
 
-      // If we detect a new lender AND we already have an outstanding for a previous one, save it
-      if(lineLender && lineLender !== lenderName && outstanding > 0){
-        debtEntries.push({ name: lenderName || 'Loan', outstanding, emi, apr });
-        lenderName = lineLender; outstanding = 0; emi = 0; apr = 0;
+      const label = labelOf(lc);
+
+      // Label with no number on the same line: screenshots very often wrap the
+      // value onto the next row, so carry the label forward.
+      if (!cands.length){ if (label) pendingLabel = label; return; }
+
+      const key = label || pendingLabel;
+      pendingLabel = '';
+      if (!key) return;
+
+      if (key === 'apr'){
+        const pct = cands.map(c=>c.value).filter(v => v > 0 && v <= 100);
+        if (pct.length) cur.apr = cur.apr || pct[0];
+        return;
       }
-      if(lineLender) lenderName = lineLender;
+      const money = mgPreferMoney(cands).map(c => c.value).filter(v => v >= 1);
+      if (!money.length) return;
+      const best = Math.max(...money);
+      if (key === 'outstanding')      cur.outstanding = Math.max(cur.outstanding, best);
+      else if (key === 'creditLimit') cur.creditLimit = Math.max(cur.creditLimit, best);
+      else if (key === 'emi')         cur.emi = cur.emi || Math.min(...money.filter(v => v >= 1));
     });
 
-    // Save last detected debt
-    if(outstanding > 0) debtEntries.push({ name: lenderName || 'Loan', outstanding, emi, apr });
+    if (hasAny()) debtEntries.push({ name: lenderName || 'Loan', ...cur });
 
-    // If nothing structured found, fall back to largest number as outstanding
+    // Nothing labelled: fall back to the largest properly formatted money value.
     if(!debtEntries.length){
-      const allNums = [...text.matchAll(/([\d,]+\.?\d{0,2})/g)]
-        .map(m => parseFloat(m[1].replace(/,/g,'')))
-        .filter(n => n > 100 && n < 10000000);
-      if(allNums.length){
-        allNums.sort((a,b)=>b-a);
-        debtEntries.push({ name: lenderName || 'Imported Loan', outstanding: allNums[0], emi: allNums[1]||0, apr: 0 });
+      const all = [];
+      rawLines.forEach(l => mgFindAmounts(mgStripIdentifiers(l).replace(MG_DATE_RE,' '))
+        .filter(c => c.currencyFormatted && c.value > 100 && c.value < 1e7)
+        .forEach(c => all.push(c.value)));
+      if(all.length){
+        all.sort((a,b)=>b-a);
+        debtEntries.push({ name: lenderName || 'Imported Loan', outstanding: all[0], emi: 0, apr: 0, creditLimit: 0 });
       }
     }
 
-    if(!debtEntries.length){
-      if(statusEl) statusEl.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px">❌ <strong>Could not detect loan details.</strong><br><br><span style="color:#64748b">Try a clearer screenshot showing the outstanding balance clearly.</span></div>`;
+    const usable = debtEntries.filter(d => d.outstanding > 0 || d.emi > 0);
+    if(!usable.length){
+      if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px">❌ <strong>Could not detect loan details.</strong><br><br><span style="color:#64748b">Try a screenshot that clearly shows the outstanding balance, monthly instalment and interest rate.</span></div>`; }
       return;
     }
 
@@ -5843,40 +6036,44 @@ function mgParseExtractedText(text, mode, modalId){
     if(statusEl) statusEl.style.display='none';
     if(previewEl){
       previewEl.style.display='block';
-      let html = `<div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#c4b5fd">🤖 <strong>AI detected ${debtEntries.length} loan${debtEntries.length>1?'s':''}</strong> — review details below before importing.</div>`;
+      let html = `<div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#c4b5fd">🤖 <strong>AI detected ${usable.length} loan${usable.length>1?'s':''}</strong> — review details below before importing.</div>`;
 
-      debtEntries.forEach((d,i) => {
+      usable.forEach((d,i) => {
         html += `
           <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:12px;padding:14px;margin-bottom:10px">
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
               <input type="checkbox" id="mgd-${i}" checked style="accent-color:#f59e0b;width:16px;height:16px"/>
-              <span style="color:#fde68a;font-weight:700;font-size:14px">💳 ${d.name}</span>
+              <span style="color:#fde68a;font-weight:700;font-size:14px">💳 ${escapeHtml(d.name)}</span>
             </div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div>
                 <div style="color:#64748b;font-size:11px;margin-bottom:3px">Outstanding Balance</div>
-                <input type="number" id="mgd-outstanding-${i}" value="${d.outstanding}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
+                <input type="number" inputmode="decimal" id="mgd-outstanding-${i}" value="${d.outstanding}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
               </div>
               <div>
                 <div style="color:#64748b;font-size:11px;margin-bottom:3px">Monthly EMI</div>
-                <input type="number" id="mgd-emi-${i}" value="${d.emi}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
+                <input type="number" inputmode="decimal" id="mgd-emi-${i}" value="${d.emi}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
               </div>
               <div>
                 <div style="color:#64748b;font-size:11px;margin-bottom:3px">Interest Rate (APR %)</div>
-                <input type="number" id="mgd-apr-${i}" value="${d.apr}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
+                <input type="number" inputmode="decimal" id="mgd-apr-${i}" value="${d.apr}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
               </div>
               <div>
+                <div style="color:#64748b;font-size:11px;margin-bottom:3px">Credit Limit (0 = N/A)</div>
+                <input type="number" inputmode="decimal" id="mgd-limit-${i}" value="${d.creditLimit||0}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
+              </div>
+              <div style="grid-column:1 / -1">
                 <div style="color:#64748b;font-size:11px;margin-bottom:3px">Lender Name</div>
-                <input type="text" id="mgd-name-${i}" value="${d.name}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
+                <input type="text" id="mgd-name-${i}" value="${escapeHtml(d.name)}" style="width:100%;background:rgba(0,0,0,0.3);border:1px solid rgba(245,158,11,0.3);color:#f1f5f9;border-radius:8px;padding:7px 10px;font-size:13px"/>
               </div>
             </div>
           </div>`;
       });
 
       html += `
-        <button onclick="mgImportStructuredDebts(${debtEntries.length},'${modalId}')"
+        <button onclick="mgImportStructuredDebts(${usable.length},'${modalId}')"
           style="width:100%;background:#f59e0b;color:#1a1a2e;border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;margin-top:4px">
-          ✅ Import ${debtEntries.length} Debt${debtEntries.length>1?'s':''}
+          ✅ Import ${usable.length} Debt${usable.length>1?'s':''}
         </button>
         <button onclick="document.getElementById('${modalId}').remove()"
           style="width:100%;margin-top:8px;background:rgba(255,255,255,0.04);color:#64748b;border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:9px;font-size:12px;cursor:pointer">
@@ -5887,46 +6084,78 @@ function mgParseExtractedText(text, mode, modalId){
     return;
   }
 
-  // ── INCOME / EXPENSE MODE (unchanged logic below) ────────
+  // ── INCOME / EXPENSE MODE ────────────────────────────────
   const transactions = [];
-  const lines = text.split(/\n/);
 
-  lines.forEach(line => {
-    const clean = line.trim();
-    if(clean.length < 4) return;
+  rawLines.forEach(line => {
+    if(line.length < 4) return;
+    if(MG_SKIP_LINE_RE.test(line)) return;
+    if(mgIsHeaderRow(line)) return;
 
-    // Skip percentage-only lines
-    if(/^\s*[\d.,]+\s*%/.test(clean)) return;
+    const dateMatch = line.match(MG_DATE_RE);
+    const date = dateMatch ? dateMatch[0] : '';
 
-    const matches = [...clean.matchAll(/(?:AED|aed|dhs?|د\.إ)?\s*([\d,]+\.?\d{0,2})/gi)];
-    if(!matches.length) return;
+    let work = mgStripIdentifiers(line);
+    if(date) work = work.replace(MG_DATE_RE, ' ');
 
-    const amounts = matches.map(m => parseFloat(m[1].replace(/,/g,''))).filter(a => a >= 1 && a < 1000000);
-    if(!amounts.length) return;
+    // A line that is only a percentage carries no transaction.
+    if(/^\s*[\d.,]+\s*%/.test(work)) return;
 
-    // Skip if all numbers look like percentages (< 30)
-    if(amounts.every(a => a < 30) && /%/.test(clean)) return;
+    const cands = mgPreferMoney(mgFindAmounts(work));
+    if(!cands.length) return;
 
-    const amount = amounts[amounts.length - 1];
-    const descPart = clean.replace(/[\d,\.]+/g,' ').replace(/\s+/g,' ').trim().substring(0,60) || 'Transaction';
+    // Statement rows read: date | description | amount | running balance.
+    // The final number is therefore the balance, not the transaction, whenever
+    // more than one money value survives on the row.
+    let chosen;
+    const marked = cands.filter(c => c.marker);
+    if(marked.length){
+      chosen = marked[0];
+    } else if(cands.length === 1){
+      chosen = cands[0];
+    } else {
+      const withoutBalance = cands.slice(0, -1);
+      chosen = [...withoutBalance].reverse().find(c => c.value > 0) || cands[0];
+    }
+    const amount = chosen.value;
+    if(!(amount >= 0.01 && amount < 10000000)) return;
 
-    let type = incomeKeywords.test(clean) ? 'income' : 'expense';
-    transactions.push({ desc: descPart, amount: +amount.toFixed(2), type, include: true });
+    // Description: drop the date and every money token, keep everything else.
+    let desc = work
+      .replace(/(\()?\s*(-|\+)?\s*(?:AED|aed|dhs?|DHS?|د\.إ|USD|usd|\$|EUR|eur|€|GBP|gbp|£|INR|inr|Rs\.?)?\s*(\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?|\d+\.\d{1,2}|\d{1,7})\s*(CR|DR|Cr|Dr|cr|dr)?\s*(\))?/g, ' ')
+      .replace(/\b(?:AED|USD|EUR|GBP|INR|DHS)\b/gi, ' ')
+      .replace(/[|;·•]+/g, ' ')
+      .replace(/\s{2,}/g, ' ')
+      .replace(/^[\s\-–—:,.]+|[\s\-–—:,.]+$/g, '')
+      .trim();
+
+    // Without a few letters of description this is a summary or layout artefact.
+    if((desc.match(/[A-Za-z]/g) || []).length < 3) return;
+
+    let type;
+    if(chosen.marker === 'CR') type = 'income';
+    else if(chosen.marker === 'DR') type = 'expense';
+    else if(chosen.negative) type = 'expense';
+    else if(incomeKeywords.test(desc)) type = 'income';
+    else if(expenseKeywords.test(desc)) type = 'expense';
+    else type = 'expense';
+
+    transactions.push({ desc: desc.substring(0,60), amount: +amount.toFixed(2), type, date, include: true });
   });
 
-  // Deduplicate by (desc, amount)
+  // Deduplicate on the full triple so genuine repeats on different days survive.
   const seen = new Set();
   const unique = transactions.filter(t => {
-    const k = t.desc + '|' + t.amount;
+    const k = t.date + '|' + t.desc + '|' + t.amount;
     if(seen.has(k)) return false;
     seen.add(k); return true;
   });
 
   if(unique.length === 0){
-    if(statusEl) statusEl.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px">
-      ❌ <strong>No amounts found.</strong><br><br>
-      <span style="color:#64748b">The file was read but no transaction amounts could be detected. Try a clearer screenshot or export as CSV from your bank app.</span>
-    </div>`;
+    if(statusEl){ statusEl.style.display='block'; statusEl.innerHTML = `<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:10px;padding:12px;color:#fca5a5;font-size:12px">
+      ❌ <strong>No transactions found.</strong><br><br>
+      <span style="color:#64748b">The file was read but no rows with both a description and an amount could be detected. Try a clearer screenshot, or export as CSV from your bank app.</span>
+    </div>`; }
     return;
   }
 
@@ -5939,12 +6168,10 @@ function mgParseExtractedText(text, mode, modalId){
 
     const income  = unique.filter(t => t.type==='income').length;
     const expense = unique.filter(t => t.type==='expense').length;
-    const debts   = unique.filter(t => t.type==='debt').length;
 
     let summary = `✅ Found <strong>${unique.length} entries</strong>`;
     if(income)   summary += ` — ${income} income`;
     if(expense)  summary += `, ${expense} expenses`;
-    if(debts)    summary += `, ${debts} debts`;
 
     let html = `
       <div style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);border-radius:10px;padding:10px 12px;margin-bottom:12px;font-size:12px;color:#c4b5fd">
@@ -5953,26 +6180,29 @@ function mgParseExtractedText(text, mode, modalId){
       <div style="max-height:280px;overflow-y:auto;border:1px solid rgba(255,255,255,0.06);border-radius:10px">`;
 
     unique.forEach((t, i) => {
-      const color = t.type==='income' ? '#22c55e' : t.type==='debt' ? '#f59e0b' : '#f87171';
-      const icon  = t.type==='income' ? '💵' : t.type==='debt' ? '💳' : '🏠';
-      const badge = t.type==='income' ? 'Income' : t.type==='debt' ? 'Debt' : 'Expense';
+      const color = t.type==='income' ? '#22c55e' : '#f87171';
+      const icon  = t.type==='income' ? '💵' : '🏠';
+      const badge = t.type==='income' ? 'Income' : 'Expense';
       html += `
         <label style="display:flex;align-items:center;gap:10px;padding:9px 12px;border-bottom:1px solid rgba(255,255,255,0.04);cursor:pointer">
           <input type="checkbox" id="${previewId}-${i}" checked style="accent-color:#6366f1;width:16px;height:16px;flex-shrink:0"/>
-          <span style="flex:1;font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${t.desc}">${icon} ${t.desc}</span>
+          <span style="flex:1;min-width:0">
+            <span style="display:block;font-size:12px;color:#cbd5e1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${escapeHtml(t.desc)}">${icon} ${escapeHtml(t.desc)}</span>
+            ${t.date ? `<span style="display:block;font-size:10px;color:#475569">${escapeHtml(t.date)}</span>` : ''}
+          </span>
           <span style="font-size:11px;color:${color};background:${color}22;padding:2px 7px;border-radius:20px;flex-shrink:0">${badge}</span>
           <span style="font-size:12px;font-weight:600;color:${color};flex-shrink:0;min-width:60px;text-align:right">AED ${t.amount.toLocaleString()}</span>
         </label>`;
     });
 
     html += `</div>
-      <p style="font-size:11px;color:#475569;margin-top:8px">🤖 Categories are AI-guessed from keywords — adjust after import if needed.</p>
+      <p style="font-size:11px;color:#475569;margin-top:8px">🤖 Income vs expense is guessed from CR/DR markers and keywords — adjust after import if needed.</p>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">
-        <button onclick="mgImportAll_ocr(${JSON.stringify(unique).replace(/"/g,'&quot;')}, '${mode}', '${modalId}')"
+        <button onclick="mgImportAll_ocr(${escapeHtml(JSON.stringify(unique))}, '${mode}', '${modalId}')"
           style="background:#22c55e;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:700;cursor:pointer">
           ⚡ Import All (${unique.length})
         </button>
-        <button onclick="${importFn}(${JSON.stringify(unique).replace(/"/g,'&quot;')})"
+        <button onclick="${importFn}(${escapeHtml(JSON.stringify(unique))})"
           style="background:#6366f1;color:#fff;border:none;border-radius:10px;padding:11px;font-size:13px;font-weight:600;cursor:pointer">
           ✅ Review & select
         </button>
@@ -6028,7 +6258,8 @@ function mgImportStructuredDebts(count, modalId){
     const outstanding = parseFloat(document.getElementById('mgd-outstanding-' + i)?.value) || 0;
     const emi         = parseFloat(document.getElementById('mgd-emi-' + i)?.value) || 0;
     const apr         = parseFloat(document.getElementById('mgd-apr-' + i)?.value) || 0;
-    data.debts.push({ name, outstanding, emi, apr, due:'', priority:'Medium', notes:'Imported', payThisMonth: emi, paid:false, color:'#f59e0b' });
+    const creditLimit = parseFloat(document.getElementById('mgd-limit-' + i)?.value) || 0;
+    data.debts.push({ name, outstanding, emi, apr, creditLimit, type: creditLimit > 0 ? 'Credit Card' : 'Loan', due:'', priority:'Medium', notes:'Imported', payThisMonth: emi, paid:false, color:'#f59e0b' });
     added++;
   }
   renderDebt(); calc(); saveAuto();
@@ -9013,6 +9244,7 @@ function buildPersonalizedPlan(h, baseline, boosted, extra, monthsSaved, interes
 
 // ---------- SAVINGS GOALS ----------
 function renderGoals(){
+  if (mgDeferRender('goalsList', renderGoals)) return;
   const list = document.getElementById('goalsList');
   if (!list) return;
   if (!data.goals || data.goals.length === 0) {
@@ -9055,6 +9287,7 @@ function removeGoal(i){ if(confirm('Remove this goal?')){ data.goals.splice(i,1)
 
 // ---------- NET WORTH ----------
 function renderAssets(){
+  if (mgDeferRender('assetsList', renderAssets)) return;
   const list = document.getElementById('assetsList');
   if (!list) return;
   list.innerHTML = data.assets.map((a, i) => `
@@ -13941,6 +14174,7 @@ answerOffline = function(question){
 // ============ 💸 SUBSCRIPTIONS TRACKER ==================
 // ========================================================
 function renderSubscriptions(){
+  if (mgDeferRender('subscriptionsList', renderSubscriptions)) return;
   const list = document.getElementById('subscriptionsList');
   if (!list) return;
 
@@ -15683,6 +15917,11 @@ function chartDebtOverTime(){
     return '<p style="text-align:center;color:#94a3b8;padding:40px">🎉 You have no active debts to chart!</p>';
   }
   const maxVal = Math.max(...timeline.map(t => t.total)) * 1.05;
+  // A debt row that exists but has no balance yet (just added, or fully paid)
+  // makes every total 0, and 0/0 turns every SVG coordinate into NaN.
+  if (!isFinite(maxVal) || maxVal <= 0) {
+    return '<p style="text-align:center;color:#94a3b8;padding:40px">🎉 You have no active debts to chart!</p>';
+  }
   const minMonth = 0;
   const maxMonth = timeline.length - 1;
   const W = 600, H = 280, P = 40;
