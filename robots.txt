@@ -1,5 +1,12 @@
 User-agent: *
 Allow: /
+Allow: /*.js
+Allow: /*.css
+
+User-agent: Googlebot
+Allow: /
+Allow: /*.js
+Allow: /*.css
 
 User-agent: GPTBot
 Allow: /
