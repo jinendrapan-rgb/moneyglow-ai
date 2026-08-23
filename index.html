@@ -6807,7 +6807,7 @@ const HOME_MISSION_META = {
   logTransaction: { title: "Log today's transactions", why: 'Logging transactions keeps your Weekly Review and Health Score accurate.', cta: 'Add a transaction', action: () => { switchScreen('money'); goToOpportunity('sec-transactions'); } },
   setGoal: { title: 'Set your first savings goal', why: 'A savings goal gives your surplus somewhere real to go.', cta: 'Set a goal', action: () => { switchScreen('goals'); goToOpportunity('sec-goals'); } },
   checkedIn: { title: 'Do your weekly check-in', why: "A quick check-in keeps your plan's tone matched to how you're actually feeling.", cta: 'Check in', action: () => { openCopilotScreen(); setTimeout(() => goToOpportunity('sec-weeklyreview'), 350); } },
-  triedDecisionLab: { title: 'Try the Financial Decision Lab', why: 'Run a real decision through the Decision Lab before you commit to it.', cta: 'Open Decision Lab', action: () => { openCopilotScreen(); } }
+  triedDecisionLab: { title: 'Try the Financial Decision Lab', why: 'Run a real decision through the Decision Lab before you commit to it.', cta: 'Open Decision Lab', action: () => { openCopilotScreen(); setTimeout(() => goToOpportunity('sec-whatif'), 350); } }
 };
 const HOME_MISSION_PRIORITY = ['noOverdue','utilizationHealthy','emergencyStarted','payDebt','logTransaction','setGoal','checkedIn','triedDecisionLab'];
 
@@ -9239,7 +9239,7 @@ function quickAction(type){
   if (type === 'income') { switchScreen('money'); addIncomeRow(); goToOpportunity('sec-income'); }
   else if (type === 'expense') { switchScreen('money'); addExpenseRow(); goToOpportunity('sec-expenses'); }
   else if (type === 'debt') { switchScreen('money'); addDebtRow(); goToOpportunity('sec-debts'); }
-  else if (type === 'copilot') { openCopilotScreen(); }
+  else if (type === 'copilot') { switchScreen('copilot'); const p = document.getElementById('aiPanel'); if (p && !p.classList.contains('show')) toggleAI(); }
 }
 function renderQuickActions(){
   const el = document.getElementById('quickActionsContent');
@@ -19680,10 +19680,18 @@ loadLocalAdminData();
 // reduced-motion kill-switch doesn't cover scrollIntoView()/scrollTo() calls that pass
 // an explicit behavior:'smooth' option (inline JS options win over CSS scroll-behavior),
 // so every such call site asks this instead of hardcoding 'smooth'.
+// Real bug: 'smooth' scrollIntoView silently stopped short of the target on a
+// screen switch (confirmed: landed ~350px into a ~1300px scroll and stayed
+// there) whenever the switch also toggled a lot of display:none/block on other
+// elements in the same tick — the animated scroll's target apparently gets
+// computed against layout that hasn't finished settling, and unlike an instant
+// jump it never corrects afterward. This is exactly what goToOpportunity() hits
+// on every call (switchScreen() flips ~20 sections' display right before the
+// scroll). A reliably-correct instant scroll beats a prettier one that quietly
+// lands in the wrong place, so this is 'auto' unconditionally now, not just
+// under prefers-reduced-motion.
 function mgScrollBehavior(){
-  try {
-    return (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) ? 'auto' : 'smooth';
-  } catch(e) { return 'smooth'; }
+  return 'auto';
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -19825,10 +19833,16 @@ function switchSubTab(group, tab, persist){
 // Life Decisions, Financial Twin, Opportunity Center, Weekly Review) underneath, then
 // opens the chat panel on top, exactly like the old Copilot FAB did. Guards against
 // toggleAI() being a real toggle — re-tapping the tab shouldn't close an already-open chat.
+// Navigates to the Copilot screen only — used to be joined at the hip with
+// toggleAI(), forcing the full-screen chat panel open on every single call site
+// (bottom-nav tab, every AI Hub card, mission actions). That meant the chat
+// permanently covered the Copilot screen's other real content (Opportunity
+// Center, Weekly Review, Financial Twin, Life Decisions, Decision Lab) —
+// tapping an AI Hub card like "Life Decisions" opened an empty chat instead of
+// the actual tool, which read as "does nothing" / "blank". Chat now opens only
+// where that's actually the intent — see quickAction('copilot') below.
 function openCopilotScreen(){
   switchScreen('copilot');
-  const panel = document.getElementById('aiPanel');
-  if (panel && !panel.classList.contains('show')) toggleAI();
 }
 
 // ═══════════════════════════════════════════════════════════════
