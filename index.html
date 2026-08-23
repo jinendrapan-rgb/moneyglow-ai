@@ -13729,8 +13729,29 @@ buildPWAManifest();
 // Optional: register a basic service worker for offline use (when served from HTTPS).
 // Must be a real same-origin file — browsers reject "blob:" URLs for SW scripts
 // (a blob-based attempt here silently failed on every load; see REFACTORS.md).
+//
+// Real bug this caused: registering alone means a tab that was already open (or
+// even freshly reloaded) can keep being controlled by whatever service worker
+// instance it started with — a new sw.js can install in the background, but
+// nothing here ever told the PAGE to hand control to it or reload. A user could
+// "reload" many times after a real deploy and keep seeing the exact same old,
+// broken JS every time, no matter how many fixes actually shipped — which is
+// exactly what was happening. Two additions: force an update check on every
+// load instead of waiting for the browser's own lazy schedule, and reload once
+// (guarded against loops) the moment a new worker actually takes control.
 if ('serviceWorker' in navigator && location.protocol === 'https:') {
-  navigator.serviceWorker.register('sw.js').catch(e => console.warn('SW registration failed:', e));
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    reg.update();
+  }).catch(e => console.warn('SW registration failed:', e));
+
+  let _swReloading = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (_swReloading) return;
+    if (sessionStorage.getItem('mg_sw_reloaded') === '1') return; // never loop more than once per tab
+    _swReloading = true;
+    sessionStorage.setItem('mg_sw_reloaded', '1');
+    location.reload();
+  });
 }
 
 // PWA install hint for iOS Safari (no programmatic install — must show instructions)

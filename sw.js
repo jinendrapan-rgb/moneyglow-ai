@@ -3,7 +3,7 @@
 // stale page on every visit and only picked up a new deploy on the *second*
 // load. The page itself is therefore network-first (with the cache as the
 // offline fallback); everything else stays cache-first for speed.
-const CACHE = 'moneyglow-v2';
+const CACHE = 'moneyglow-v3';
 
 self.addEventListener('install', e => self.skipWaiting());
 
