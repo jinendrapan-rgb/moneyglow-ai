@@ -28,3 +28,5 @@ Allow: /
 
 User-agent: Meta-ExternalAgent
 Allow: /
+
+Sitemap: https://jinendrapan-rgb.github.io/moneyglow-ai/sitemap.xml
