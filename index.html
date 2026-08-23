@@ -2338,6 +2338,22 @@
     padding: 16px;
     margin-bottom: 14px;
   }
+  /* Desktop: tabs like Overview render 2+ .admin-section blocks in a row (Business
+     Snapshot, Top Referrers) that otherwise stack full-width one under another same
+     as the main app did — same fix, scoped to whichever tab is currently rendered
+     into #adminTabContent. Tables stay full-width (:has(table)) since squeezing a
+     data table into a ~420px column just forces horizontal scroll inside it. */
+  @media (min-width: 1024px) {
+    .admin-panel { max-width: 1500px; }
+    #adminTabContent {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      align-items: start;
+      gap: 16px;
+    }
+    #adminTabContent .admin-section { margin-bottom: 0; }
+    #adminTabContent .admin-section:has(table) { grid-column: 1 / -1; }
+  }
   .admin-section h2 {
     font-size: 16px;
     color: #c4b5fd;
@@ -4555,7 +4571,6 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
           <button id="mgSyncBtn" onclick="mgSheetsBackup()" style="margin-top:8px;background:rgba(16,185,129,0.1);color:#10b981;border:1px solid rgba(16,185,129,0.3);padding:10px 16px;border-radius:8px;cursor:pointer;width:100%;font-weight:600;font-size:13px;font-family:inherit">📊 Sync to Google Sheets</button>
         </div>
       </div>
-</div>
     </div>
   </div>
 
@@ -15356,6 +15371,22 @@ function exportPDFReport(){
     padding: 16px;
     margin-bottom: 14px;
   }
+  /* Desktop: tabs like Overview render 2+ .admin-section blocks in a row (Business
+     Snapshot, Top Referrers) that otherwise stack full-width one under another same
+     as the main app did — same fix, scoped to whichever tab is currently rendered
+     into #adminTabContent. Tables stay full-width (:has(table)) since squeezing a
+     data table into a ~420px column just forces horizontal scroll inside it. */
+  @media (min-width: 1024px) {
+    .admin-panel { max-width: 1500px; }
+    #adminTabContent {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      align-items: start;
+      gap: 16px;
+    }
+    #adminTabContent .admin-section { margin-bottom: 0; }
+    #adminTabContent .admin-section:has(table) { grid-column: 1 / -1; }
+  }
   .admin-section h2 {
     font-size: 16px;
     color: #c4b5fd;
@@ -19866,9 +19897,26 @@ if (typeof applyFeatureFlags === 'function') applyFeatureFlags();
        immediately regardless of where <nav> sits in the DOM. Needs an explicit
        padding-top reservation on .container since fixed removes it from flow entirely
        (sticky used to reserve that space implicitly; fixed does not). */
-    .bottom-nav { position: fixed; top: 0; bottom: auto; left: 0; right: 0; border-top: none; border-bottom: 1px solid var(--mg-border); }
-    .bottom-nav-item { flex-direction: row; gap: 6px; padding: 12px 8px; }
-    body.has-bottom-nav .container { padding-bottom: 0; padding-top: 64px; }
+    .bottom-nav {
+      position: fixed; top: 0; bottom: auto; left: 0; right: 0;
+      border-top: none; border-bottom: 1px solid var(--mg-border);
+      justify-content: center;
+      gap: 8px;
+      padding: 0 24px;
+    }
+    .bottom-nav-item {
+      flex: none;
+      flex-direction: row;
+      gap: 10px;
+      padding: 20px 22px;
+      min-height: 68px;
+      border-radius: 10px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .bottom-nav-item:hover { background: rgba(139,92,246,0.1); color: var(--mg-text); }
+    .bottom-nav-item .bn-icon { font-size: 22px; }
+    .bottom-nav-item .bn-label { font-size: 15px; font-weight: 600; letter-spacing: normal; }
+    body.has-bottom-nav .container { padding-bottom: 0; padding-top: 76px; }
   }
 </style>
 <nav class="bottom-nav" id="bottomNav" aria-label="Main navigation">
