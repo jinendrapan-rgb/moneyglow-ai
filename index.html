@@ -6531,34 +6531,44 @@ function calc(){
 }
 
 // SINGLE source of truth — all derived sections refresh from here
+// Each render call isolated in its own try/catch — this used to be one flat
+// sequential block, so a single throw anywhere (e.g. a data shape one render
+// function doesn't expect) silently killed every render call after it for the
+// rest of the function. Real bug: Today's Mission/Snapshot/AI Hub/Quick Actions
+// all went blank (and their buttons dead, since the click handlers they set up
+// never ran) whenever something earlier in this list threw on a user's real
+// saved data, even though the exact same code worked fine on fresh sample data.
+function _safeRender(name, fn){
+  try { fn(); } catch(e){ console.error('refreshAll: ' + name + ' failed:', e); }
+}
 function refreshAll(){
-  renderForecast();
-  renderCalendar();
-  renderActiveLabTab();
-  updateNetWorth();
-  renderBudget();
-  renderUtilization();
-  renderAlerts();
-  renderPlan();
-  renderTransactions();
-  renderHero();
-  renderHomeGreeting();
-  renderTodaysMission();
-  renderTodaysSnapshot();
-  renderAIHubShortcuts();
-  renderQuickActions();
-  renderProgressPreview();
-  renderOptimizer();
-  renderOpportunityCenter();
-  renderWeeklyReview();
-  renderFinancialTwin();
-  renderSmartForecasts();
-  renderFinancialTimeline();
-  renderGamification();
-  renderMonthlyCEOReport();
-  renderWealthMode();
-  renderFamilyHub();
-  renderLifeDecisions();
+  _safeRender('renderForecast', renderForecast);
+  _safeRender('renderCalendar', renderCalendar);
+  _safeRender('renderActiveLabTab', renderActiveLabTab);
+  _safeRender('updateNetWorth', updateNetWorth);
+  _safeRender('renderBudget', renderBudget);
+  _safeRender('renderUtilization', renderUtilization);
+  _safeRender('renderAlerts', renderAlerts);
+  _safeRender('renderPlan', renderPlan);
+  _safeRender('renderTransactions', renderTransactions);
+  _safeRender('renderHero', renderHero);
+  _safeRender('renderHomeGreeting', renderHomeGreeting);
+  _safeRender('renderTodaysMission', renderTodaysMission);
+  _safeRender('renderTodaysSnapshot', renderTodaysSnapshot);
+  _safeRender('renderAIHubShortcuts', renderAIHubShortcuts);
+  _safeRender('renderQuickActions', renderQuickActions);
+  _safeRender('renderProgressPreview', renderProgressPreview);
+  _safeRender('renderOptimizer', renderOptimizer);
+  _safeRender('renderOpportunityCenter', renderOpportunityCenter);
+  _safeRender('renderWeeklyReview', renderWeeklyReview);
+  _safeRender('renderFinancialTwin', renderFinancialTwin);
+  _safeRender('renderSmartForecasts', renderSmartForecasts);
+  _safeRender('renderFinancialTimeline', renderFinancialTimeline);
+  _safeRender('renderGamification', renderGamification);
+  _safeRender('renderMonthlyCEOReport', renderMonthlyCEOReport);
+  _safeRender('renderWealthMode', renderWealthMode);
+  _safeRender('renderFamilyHub', renderFamilyHub);
+  _safeRender('renderLifeDecisions', renderLifeDecisions);
 }
 
 // ---------- SAVE / LOAD ----------
