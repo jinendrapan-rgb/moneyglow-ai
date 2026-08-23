@@ -17442,7 +17442,7 @@ async function openAdminLogin(){
       <button class="admin-login-btn" onclick="submitAdminPwd()">${hasPwd ? '🔓 Unlock' : '🔐 Create & Enter'}</button>
       <div class="admin-fail" id="adminFail"></div>
       <p style="margin-top:14px;font-size:11px;color:#64748b">
-        ${hasPwd ? '⚠️ Forgot password? Use console: <code>resetAdminPwd()</code>' : '💡 Tip: Use a long passphrase like <code>MyCoffeeIs5AED2026!</code>'}
+        ${hasPwd ? '<a href="#" onclick="event.preventDefault();resetAdminPwdFromLogin()" style="color:#f87171">Forgot password? Tap to reset</a>' : '💡 Tip: Use a long passphrase like <code>MyCoffeeIs5AED2026!</code>'}
       </p>
       <button class="admin-close-btn" onclick="closeAdmin()" style="margin-top:10px">Cancel</button>
     </div>
@@ -17493,9 +17493,19 @@ async function submitAdminPwd(){
 window.resetAdminPwd = function(){
   if (confirm('⚠️ Reset admin password? You\'ll need to set a new one.')) {
     localStorage.removeItem(ADMIN_PWD_KEY);
-    alert('✅ Admin password removed. Press Ctrl+Shift+J to set a new one.');
+    alert('✅ Admin password removed. Reopen this page with ?admin=1 in the address bar (or press Ctrl+Shift+J on desktop) to set a new one.');
   }
 };
+
+// Same reset, callable straight from the login screen's "forgot password" link —
+// no keyboard shortcut or console needed, so it actually works on mobile. Immediately
+// re-renders the login screen, which now shows the Setup/Create flow since hasPwd
+// just became false.
+function resetAdminPwdFromLogin(){
+  if (!confirm('Reset admin password? You\'ll set a new one right now.')) return;
+  localStorage.removeItem(ADMIN_PWD_KEY);
+  openAdminLogin();
+}
 
 function closeAdmin(){
   document.getElementById('adminOverlay').classList.remove('show');
