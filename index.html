@@ -3037,6 +3037,40 @@ html, body {
 }
 .container { position: relative; z-index: 1; }
 
+/* ── DESKTOP DASHBOARD LAYOUT ──
+   Every screen's cards are flat siblings of .container (data-screen show/hide
+   toggles display, they're never physically moved — see CLAUDE.md's nav
+   architecture note), so this can't reorder or regroup them in HTML without
+   risking that mechanism. Instead: turn .container into an auto-fit grid at
+   desktop widths — hidden (display:none) cards from inactive screens simply
+   don't occupy a cell, so only the active screen's cards flow into columns.
+   align-items:start (not stretch) means uneven card heights don't force
+   matching row heights, which is what keeps this from looking like a broken
+   masonry grid. Structural chrome (header, banners, subtab bars) is forced
+   to span the full row width so it never gets squeezed into one column next
+   to a card. */
+@media (min-width: 1024px) {
+  .container { max-width: 1400px; }
+  .container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+    align-items: start;
+    gap: 20px;
+  }
+  .container > .quick-bar,
+  .container > header,
+  .container > .offer-banner,
+  .container > .home-greeting,
+  .container > .ai-plan-cta-row,
+  .container > .mg-subtabs,
+  .container > .money-tabs,
+  .container > footer,
+  .container > #ie-grid {
+    grid-column: 1 / -1;
+  }
+  .container > .card { margin-bottom: 0; }
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
