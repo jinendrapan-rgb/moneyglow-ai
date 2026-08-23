@@ -5267,28 +5267,34 @@ function renderDebt(){
 
         <div class="field-grid">
           <div class="field">
-            <div class="field-label">APR %</div>
-            <input type="number" inputmode="decimal" step="0.01" value="${d.apr}" oninput="data.debts[${i}].apr=parseFloat(this.value)||0;refreshAll();saveAuto()"/>
+            <div class="field-label">APR % (yearly)</div>
+            <input type="number" inputmode="decimal" step="0.01" value="${d.apr}" oninput="data.debts[${i}].apr=parseFloat(this.value)||0;data.debts[${i}].monthlyRate=data.debts[${i}].apr/12;renderDebt();refreshAll();saveAuto()"/>
           </div>
           <div class="field">
-            <div class="field-label">Due Date</div>
-            <input value="${escapeHtml(d.due)}" oninput="data.debts[${i}].due=this.value;refreshAll();saveAuto()"/>
+            <div class="field-label">or Monthly %</div>
+            <input type="number" inputmode="decimal" step="0.01" value="${d.monthlyRate!=null && d.monthlyRate!=='' ? d.monthlyRate : (d.apr ? (d.apr/12).toFixed(2) : '')}" placeholder="e.g. 3" oninput="data.debts[${i}].monthlyRate=parseFloat(this.value)||0;data.debts[${i}].apr=data.debts[${i}].monthlyRate*12;renderDebt();refreshAll();saveAuto()"/>
           </div>
         </div>
-
-        <div class="field-grid">
-          <div class="field">
-            <div class="field-label">Credit Limit (cards only)</div>
-            <input type="number" inputmode="decimal" value="${d.creditLimit||0}" placeholder="0 = N/A" oninput="data.debts[${i}].creditLimit=parseFloat(this.value)||0;refreshAll();saveAuto()"/>
-          </div>
-          <div class="field">
-            <div class="field-label">Type</div>
-            <select onchange="data.debts[${i}].type=this.value;refreshAll();saveAuto()">
-              ${['Credit Card','Loan','BNPL','Other'].map(t=>`<option ${t===(d.type||'Loan')?'selected':''}>${t}</option>`).join('')}
-            </select>
-          </div>
+        <div class="field">
+          <div class="field-label">Due Date</div>
+          <input value="${escapeHtml(d.due)}" oninput="data.debts[${i}].due=this.value;refreshAll();saveAuto()"/>
         </div>
 
+        <div class="field">
+          <div class="field-label">Type</div>
+          <select onchange="data.debts[${i}].type=this.value;renderDebt();refreshAll();saveAuto()">
+            ${['Credit Card','Loan','BNPL','Other'].map(t=>`<option ${t===(d.type||'Loan')?'selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+
+        ${d.type === 'Credit Card' ? `
+        <div class="field">
+          <div class="field-label">Credit Limit</div>
+          <input type="number" inputmode="decimal" value="${d.creditLimit||0}" placeholder="0 = N/A" oninput="data.debts[${i}].creditLimit=parseFloat(this.value)||0;refreshAll();saveAuto()"/>
+        </div>
+        ` : ''}
+
+        ${d.type === 'Loan' ? `
         <div class="field-grid">
           <div class="field">
             <div class="field-label">Loan term (months)</div>
@@ -5306,6 +5312,7 @@ function renderDebt(){
         </div>
 
         ${loanSummary}
+        ` : ''}
 
         <div class="field">
           <div class="field-label">Priority</div>
@@ -5329,10 +5336,19 @@ function renderDebt(){
             <div class="field">
               <div class="field-label">Status</div>
               <div class="status-buttons">
-                <button type="button" class="status-btn ${d.paid?'active-paid':''}" onclick="data.debts[${i}].paid=true;renderDebt();calc();saveAuto()">✓ PAID</button>
+                <button type="button" class="status-btn ${d.paid?'active-paid':''}" onclick="markDebtPaid(${i})">✓ PAID</button>
                 <button type="button" class="status-btn ${!d.paid?'active-unpaid':''}" onclick="data.debts[${i}].paid=false;renderDebt();calc();saveAuto()">✗ UNPAID</button>
               </div>
             </div>
+          </div>
+
+          <div class="field">
+            <div class="field-label">This month's cash flow</div>
+            <div class="status-buttons">
+              <button type="button" class="status-btn ${!d.skipThisMonth?'active-paid':''}" onclick="data.debts[${i}].skipThisMonth=false;renderDebt();calc();saveAuto()">💰 Paying this month</button>
+              <button type="button" class="status-btn ${d.skipThisMonth?'active-unpaid':''}" onclick="data.debts[${i}].skipThisMonth=true;renderDebt();calc();saveAuto()">⏭️ Not this month</button>
+            </div>
+            <div class="pay-hint">${d.skipThisMonth ? '💡 Skipped — this debt\'s EMI won\'t count in this month\'s Outflow/Free Cash. It still counts in your Total Debt.' : '💡 Counted in this month\'s Outflow. Switch to "Not this month" to leave this cash in Free Cash instead.'}</div>
           </div>
 
           <div class="balance-grid">
@@ -6405,12 +6421,22 @@ function addLogRow(){ data.log.push({month:'New month', debt1:0, debt2:0, debt3:
 function removeLog(i){ if(confirm('Remove this row?')){ data.log.splice(i,1); renderLog(); saveAuto(); } }
 
 // ---------- START NEW MONTH ----------
+// Marks PAID and, if the due date has already passed, rolls it forward to next
+// cycle immediately — see advanceDueToNextCycle() for why this matters.
+function markDebtPaid(i){
+  const d = data.debts[i];
+  d.paid = true;
+  if (d.due) d.due = advanceDueToNextCycle(d.due);
+  renderDebt(); calc(); saveAuto();
+}
+
 function resetMonth(){
   if(!confirm('Start a new month? This will:\n• Move "Next month balance" → "Outstanding" for any PAID debts\n• Reset all PAID status to UNPAID\n\nMake sure you logged this month first!')) return;
   data.debts.forEach(d => {
     if (d.paid) {
       const pay = parseFloat(d.payThisMonth) || 0;
       d.outstanding = Math.max(0, d.outstanding - pay);
+      if (d.due) d.due = advanceDueToNextCycle(d.due);
     }
     d.paid = false;
     // keep payThisMonth same as default (or could reset to emi)
@@ -6432,11 +6458,9 @@ function calc(){
     exp += c > 0 ? a/c : 0;
   });
 
-  let debtTotal = 0, emiTotal = 0;
-  data.debts.forEach(d => {
-    debtTotal += parseFloat(d.outstanding)||0;
-    emiTotal += parseFloat(d.emi)||0;
-  });
+  let debtTotal = 0;
+  data.debts.forEach(d => { debtTotal += parseFloat(d.outstanding)||0; });
+  const emiTotal = _monthlyDebtPayments(); // single source of truth — respects skipThisMonth
 
   const outflow = exp + emiTotal;
   const surplus = inc - outflow;
@@ -9468,6 +9492,29 @@ function daysUntil(date){
   return Math.round((target - now) / (1000*60*60*24));
 }
 
+// Formats a Date back into the "DD-MMM-YYYY" string parseDueDate() expects.
+function fmtDueDateStr(date){
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  return String(date.getDate()).padStart(2,'0') + '-' + MON[date.getMonth()] + '-' + date.getFullYear();
+}
+
+// A recurring debt's stored `due` is a single date, not a recurring rule — nothing
+// ever advanced it, so once real "today" passed it, every overdue check saw it as
+// overdue forever, even for a loan/card paid on time every month (real bug: RAKBANK
+// loan showing "136 days overdue" despite being paid monthly). Called when a debt is
+// marked PAID and during "Start New Month" — rolls the date forward one month at a
+// time until it's in the future again, so a paid debt reads as current, not overdue.
+function advanceDueToNextCycle(dueStr){
+  let date = parseDueDate(dueStr);
+  if (!date) return dueStr;
+  let guard = 0;
+  while (daysUntil(date) < 0 && guard < 60) {
+    date = new Date(date.getFullYear(), date.getMonth() + 1, date.getDate());
+    guard++;
+  }
+  return fmtDueDateStr(date);
+}
+
 function renderCalendar(){
   const list = document.getElementById('calendarList');
   if (!list) return;
@@ -9561,8 +9608,11 @@ function _monthlyLiving(){
   });
   return e;
 }
+// Only counts debts the user has chosen to pay this cycle (d.skipThisMonth !== true)
+// toward this month's actual cash outflow — a debt marked "not this month" still
+// counts in _totalDebt()/outstanding, it just doesn't leave your account this month.
 function _monthlyDebtPayments(){
-  let s = 0; data.debts.forEach(d => s += parseFloat(d.emi)||0); return s;
+  let s = 0; data.debts.forEach(d => { if (!d.skipThisMonth) s += parseFloat(d.emi)||0; }); return s;
 }
 function _totalDebt(){
   let s = 0; data.debts.forEach(d => s += parseFloat(d.outstanding)||0); return s;
@@ -11639,6 +11689,11 @@ function openResetMenu(){
       <div class="ro-desc">Erases all data, settings, PIN, Face ID, AI chat history, backups. Equivalent to uninstalling.</div>
     </button>
 
+    <button class="reset-option" onclick="closeModal();window.resetAdminPwd()">
+      <div class="ro-title">🔑 Reset admin password</div>
+      <div class="ro-desc">Forgot your Command Center password? Clears it so you can set a new one — doesn't touch your tracker data.</div>
+    </button>
+
     <button class="action" style="margin-top:12px" onclick="closeModal()">Cancel</button>
   `;
   document.getElementById('modalBackdrop').classList.add('show');
@@ -11670,6 +11725,12 @@ function resetAction(type){
     localStorage.removeItem('financeTracker_aiSettings');
     localStorage.removeItem('financeTracker_aiChat');
     localStorage.removeItem('financeTracker_collapse');
+  }
+
+  if (type === 'all') {
+    // Nuclear reset claims to erase "all saved preferences" — admin password hash
+    // was a real gap here, left behind by every option including this one.
+    localStorage.removeItem(ADMIN_PWD_KEY);
   }
 
   if (type === 'sample') {
