@@ -783,7 +783,9 @@
   .card.collapsible h2:hover::after { border-color: #f1f5f9; }
   .card.collapsible h2:active { opacity: 0.7; }
 
-  .card-body {
+  /* Only collapsible cards start folded. Plain Home cards (Mission, Snapshot, AI Hub,
+     Quick Actions) also use .card-body but have no toggle, so folding them hid their content. */
+  .card.collapsible .card-body {
     overflow: hidden;
     max-height: 0;
     opacity: 0;
