@@ -1,0 +1,66 @@
+/* MoneyGlow — laptop / big-screen layout.
+   Phones keep the app layout untouched. From 1024px up:
+   - Home becomes a dashboard grid (score + mission, AI Hub beside Snapshot / Quick Actions / Emergency Fund).
+   - Every other tab packs its cards into balanced columns (no empty right side),
+     and any very long card (e.g. Debts) spans the full width with its items side by side
+     (desktop-layout.js adds .mg-wide / .mg-autogrid after measuring). */
+
+/* Generate my AI plan: compact pill instead of a full-width bar (all screen sizes) */
+.ai-plan-cta-row { display: flex; justify-content: center; align-items: center; gap: 14px; flex-wrap: wrap; margin: 6px 0 14px !important; }
+.ai-plan-cta-row .hero-cta {
+  width: auto !important; position: relative; isolation: isolate; overflow: hidden;
+  padding: 12px 26px !important; border-radius: 999px !important; font-size: 14px !important; font-weight: 800 !important;
+  background: linear-gradient(135deg, #105BFF, #FC734D) !important; color: #fff !important;
+  box-shadow: 0 6px 24px rgba(16,91,255,.35), 0 0 0 1px rgba(255,255,255,.12) inset;
+  transition: transform .2s, box-shadow .2s;
+}
+.ai-plan-cta-row .hero-cta:hover { transform: translateY(-2px); box-shadow: 0 10px 30px rgba(252,115,77,.35), 0 0 0 1px rgba(255,255,255,.18) inset; }
+.ai-plan-cta-row .hero-cta::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(110deg, transparent 30%, rgba(255,255,255,.35) 50%, transparent 70%); transform: translateX(-100%); animation: mgCtaShine 4.5s ease-in-out infinite; }
+@keyframes mgCtaShine { 0%, 60% { transform: translateX(-100%); } 85%, 100% { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .ai-plan-cta-row .hero-cta::after { animation: none; } }
+
+@media (min-width: 1024px) {
+  .ai-plan-cta-row::before { content: "Your personal plan, built from your real numbers — calculated on this device."; color: var(--mg-muted, #94a3b8); font-size: 13px; }
+
+  /* ---------- Home: dashboard grid ---------- */
+  body[data-active-screen="home"] .container { grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-flow: row dense; }
+  body[data-active-screen="home"] #sec-hero { grid-column: span 2; }
+  body[data-active-screen="home"] #sec-aihub { grid-column: 2 / span 2; grid-row: span 3; }
+  body[data-active-screen="home"] #sec-aihub .card-body > div { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  body[data-active-screen="home"] #sec-aihub .aihub-card { height: 100%; }
+  body[data-active-screen="home"] #sec-snapshot,
+  body[data-active-screen="home"] #sec-quickactions,
+  body[data-active-screen="home"] #sec-progresspreview { grid-column: 1; }
+  body[data-active-screen="home"] #sec-progresspreview { align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
+  body[data-active-screen="home"] #sec-quickactions .card-body > div { gap: 10px; }
+  body[data-active-screen="home"] #mp-reviews { grid-column: span 1; }
+  body[data-active-screen="home"] #mp-ba { grid-column: 1 / -1; }
+  body[data-active-screen="home"] #mp-reviews + #mp-ba { grid-column: span 2; }
+  body[data-active-screen="home"] #mp-cmp { grid-column: 1 / -1; }
+  body[data-active-screen="home"] #mp-cmp .mp-cmpw { max-width: 860px; margin: 0 auto; }
+  body[data-active-screen="home"] #mp-ba .mp-baw { aspect-ratio: 21 / 8; max-width: 1100px; margin: 0 auto; }
+
+  /* ---------- Other tabs: balanced columns ---------- */
+  body:not([data-active-screen="home"]) .container.mg-cols { display: block; column-count: 2; column-gap: 20px; }
+  body:not([data-active-screen="home"]) .container.mg-cols > * { break-inside: avoid; }
+  body:not([data-active-screen="home"]) .container.mg-cols > .card { margin-bottom: 20px !important; }
+  body:not([data-active-screen="home"]) .container.mg-cols > :not(.card):not(style):not(script),
+  body:not([data-active-screen="home"]) .container.mg-cols > .mg-wide { column-span: all; }
+  body:not([data-active-screen="home"]) .container.mg-cols > :not(.card):not(style):not(script) { margin-bottom: 20px; }
+  body:not([data-active-screen="home"]) .container.mg-cols > .mg-skip { column-span: none !important; margin: 0 !important; }
+  .mg-autogrid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; align-items: start; }
+  .mg-autogrid > * { margin: 0 !important; }
+  #ie-grid { display: grid !important; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; align-items: start; }
+}
+@media (min-width: 1024px) {
+  body:not([data-active-screen="home"]) .container.mg-cols[data-mg-cols="1"] { column-count: 1; }
+  body:not([data-active-screen="home"]) .container.mg-cols[data-mg-cols="3"] { column-count: 3; }
+  .mg-autogrid.mg-two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1024px) and (max-width: 1279px) {
+  body[data-active-screen="home"] .container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body[data-active-screen="home"] #sec-hero, body[data-active-screen="home"] #sec-mission, body[data-active-screen="home"] #mp-ba { grid-column: 1 / -1; }
+  body[data-active-screen="home"] #sec-aihub { grid-column: 2; grid-row: span 3; }
+  body[data-active-screen="home"] #sec-aihub .card-body > div { grid-template-columns: 1fr; }
+  body[data-active-screen="home"] #mp-reviews { grid-column: 1 / -1; }
+}
