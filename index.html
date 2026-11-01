@@ -3723,7 +3723,7 @@ body.theme-light input, body.theme-light select, body.theme-light textarea { bac
     <div class="offer-icon">🎉</div>
     <div class="offer-content">
       <div class="offer-title" id="offerTitle">Founder Launch Pricing</div>
-      <div class="offer-subtitle" id="offerSubtitle">Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed. <strong>48 / 50 spots left.</strong></div>
+      <div class="offer-subtitle" id="offerSubtitle">Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed. <strong>Limited to the first 50 verified members.</strong></div>
     </div>
     <button class="offer-cta" onclick="event.stopPropagation();openPremiumModal()">Become a Founder</button>
     <button class="offer-dismiss-btn" onclick="event.stopPropagation();dismissOffer()" title="Dismiss">×</button>
@@ -12097,7 +12097,7 @@ function openPremiumModal(featureHighlight){
           <div style="font-size:12px;color:#fde68a;margin-bottom:8px">Become one of the first MoneyGlow members.</div>
           <div style="font-size:13px;color:#fef3c7">Lock your Premium subscription at <strong style="color:#fff;font-size:15px">AED 19/month</strong></div>
           <div style="font-size:11px;color:#fde68a;margin-top:4px">As long as your subscription stays active, your price will never increase.</div>
-          <div style="font-size:11px;color:#fd9a7d;margin-top:8px;font-weight:600">Founder spots remaining: <span id="founderSpotsCount">${founderLeft} / ${config.pricing.founderCap}</span></div>
+          <div style="font-size:11px;color:#fd9a7d;margin-top:8px;font-weight:600">Limited to the first ${config.pricing.founderCap} verified members</div>
         </div>
 
         <div class="crown" style="text-align:center">👑</div>
@@ -12118,10 +12118,10 @@ function openPremiumModal(featureHighlight){
             <button class="premium-buy-btn" onclick="choosePaymentMethod('monthly')">Choose Premium</button>
           </div>
           <div class="pricing-tier ${isFounderTierOpen ? '' : 'opacity-50'}" style="${isFounderTierOpen ? '' : 'opacity:0.6;pointer-events:none'}">
-            <div class="pt-badge founder-badge">${founderLeft > 0 ? founderLeft + ' OF ' + config.pricing.founderCap + ' SPOTS LEFT' : 'FULL'}</div>
+            <div class="pt-badge founder-badge">FIRST ${config.pricing.founderCap} MEMBERS</div>
             <div class="pt-name">Founder</div>
             <div class="pt-price">AED ${config.pricing.premiumMonthlyAed}<span>/mo</span></div>
-            <div class="pt-desc" style="font-size:12px;line-height:1.5">Exactly the same Premium features.<br><strong>Benefits:</strong> Founder badge • Locked lifetime pricing (while subscribed) • Early feature access • Private Founder community (Coming Soon)</div>
+            <div class="pt-desc" style="font-size:12px;line-height:1.5">Exactly the same Premium features.<br><strong>Benefits:</strong> Founder badge • Price stays AED ${config.pricing.founderMonthlyAed}/month while your monthly subscription stays active • Early feature access • Private Founder community (Coming Soon)</div>
             ${founderLeft > 0
               ? `<button class="premium-buy-btn founder-btn" onclick="choosePaymentMethod('founder')">Become a Founder</button>`
               : `<button class="premium-buy-btn" disabled style="opacity:0.5;cursor:not-allowed">Founder spots full</button>`}
@@ -13151,7 +13151,7 @@ const TC_CONTENT = {
     <ul>
       <li><strong>Free</strong> — AED 0. Budgeting, cash flow, debt tracking, Financial Decision Lab, Debt Optimizer, Opportunity Center, and your Financial Health Score are all free, permanently.</li>
       <li><strong>Premium</strong> — AED ${config.pricing.premiumMonthlyAed}/month. ${config.pricing.premiumMonthlyNote}.</li>
-      <li><strong>Founder</strong> — AED ${config.pricing.founderMonthlyAed}/month, limited to the first ${config.pricing.founderCap} verified members. Exactly the same Premium features. <strong>Benefits:</strong> Founder badge • Locked lifetime pricing (while subscription stays active) • Early feature access • Private Founder community (Coming Soon). No lifetime software license — pricing locked only while actively subscribed.</li>
+      <li><strong>Founder</strong> — AED ${config.pricing.founderMonthlyAed}/month, limited to the first ${config.pricing.founderCap} verified members. Exactly the same Premium features. <strong>Benefits:</strong> Founder badge • Founder price held while the monthly subscription stays active • Early feature access • Private Founder community (Coming Soon). Monthly subscription only — there is no lifetime access, and the Founder price holds only while the subscription stays active.</li>
     </ul>
     <h3>How payment currently works</h3>
     <p>MoneyGlow AI is in Early Access and doesn't yet have a payment processor connected. To keep costs low while the platform is still being built, two manually-verified methods are supported:</p>
@@ -16010,7 +16010,7 @@ function renderOfferBanner(){
   const titleEl = document.getElementById('offerTitle');
   const subtitleEl = document.getElementById('offerSubtitle');
   if (titleEl) titleEl.textContent = '🎉 Founder Launch Pricing';
-  if (subtitleEl) subtitleEl.innerHTML = `Become one of the first MoneyGlow members. Lock your Premium at <strong>AED 19/month</strong> — price never increases while subscribed. <strong>${stats.spotsRemaining} / ${stats.maxSpots} spots left.</strong>`;
+  if (subtitleEl) subtitleEl.innerHTML = `Become one of the first MoneyGlow members. Lock your Premium at <strong>AED ${getPaymentConfig().pricing.founderMonthlyAed}/month</strong> — price never increases while subscribed. <strong>Limited to the first ${stats.maxSpots} verified members.</strong>`;
   banner.style.display = 'flex';
 }
 
