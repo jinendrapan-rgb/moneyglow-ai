@@ -102,7 +102,7 @@ function addHomeCards() {
   anchor.insertAdjacentHTML('afterend', `
   <div class="card" id="mp-ba" data-screen="home"><div class="mp-h">🔁 Spreadsheet vs. MoneyGlow <small>drag the handle</small></div>
     <div class="mp-baw"><div class="mp-before"><div class="mp-xl">budget_FINAL_v7 (2).xlsx</div><table>${[['', 'A', 'B', 'C'], ['2', 'Rent', '7,500', '7,500'], ['3', 'Car loan', '1,850', '???'], ['4', 'Card', '900', '<b class="e">#REF!</b>'], ['5', 'Groceries', '1,400', '2,100'], ['6', 'Total', '=SUM(B2:B7', '<b class="e">#VALUE!</b>'], ['7', 'Debt free when??', '', '']].map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>
-    <div class="mp-after"><small>✦ MoneyGlow AI</small><div class="mp-big">Debt-free by<br><span>your real date.</span></div><div class="mp-row"><div>Health score<b>out of 100</b></div><div>Pay first<b>Highest rate</b></div><div>Plan<b>3 actions</b></div></div></div>
+    <div class="mp-after"><small><img src="../brand/moneyglow-symbol-on-dark.svg?v=2" alt="" style="height:18px;width:18px;vertical-align:-4px;margin-right:5px">MoneyGlow AI</small><div class="mp-big">Debt-free by<br><span>your real date.</span></div><div class="mp-row"><div>Health score<b>out of 100</b></div><div>Pay first<b>Highest rate</b></div><div>Plan<b>3 actions</b></div></div></div>
     <div class="mp-div"><i>⟷</i></div><span class="mp-tag l">BEFORE</span><span class="mp-tag r">AFTER</span></div></div>
   <div class="card" id="mp-cmp" data-screen="home"><div class="mp-h">⚖️ Why MoneyGlow</div>
     <div class="mp-cmpw"><div class="mp-panel"></div><div class="mp-grid"><div></div><div class="mp-hd">Budget apps</div><div class="mp-hd us">MoneyGlow</div>
