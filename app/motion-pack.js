@@ -90,71 +90,6 @@ function bento() {
   setTimeout(() => { bentoTimer = setInterval(() => { cards.forEach(c => c.classList.remove('mp-spot')); const c = cards[k++ % cards.length]; if (isShown(c)) c.classList.add('mp-spot'); }, 2600); }, 1500);
 }
 
-// ---------- 04 Review shuffle · 09 Before/after · 11 Us vs them (new Home cards) ----------
-const REVIEWS = [
-  ['First app that told me which debt to pay first — with the actual numbers.', 'Sample User', 'Debt Optimizer · placeholder review'],
-  ['I ran the car purchase through Decision Lab before signing. Glad I did.', 'Demo User', 'Decision Lab · placeholder review'],
-  ['Watching my debt-free date move closer keeps me going every week.', 'Example Name', 'Health Score · placeholder review'],
-  ['Love that nothing leaves my phone. No bank login, no server.', 'Sample Person', 'Privacy · placeholder review'],
-];
-function addHomeCards() {
-  const anchor = $('#sec-progresspreview'); if (!anchor || $('#mp-ba')) return;
-  anchor.insertAdjacentHTML('afterend', `
-  <div class="card" id="mp-ba" data-screen="home"><div class="mp-h">🔁 Spreadsheet vs. MoneyGlow <small>drag the handle</small></div>
-    <div class="mp-baw"><div class="mp-before"><div class="mp-xl">budget_FINAL_v7 (2).xlsx</div><table>${[['', 'A', 'B', 'C'], ['2', 'Rent', '7,500', '7,500'], ['3', 'Car loan', '1,850', '???'], ['4', 'Card', '900', '<b class="e">#REF!</b>'], ['5', 'Groceries', '1,400', '2,100'], ['6', 'Total', '=SUM(B2:B7', '<b class="e">#VALUE!</b>'], ['7', 'Debt free when??', '', '']].map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</table></div>
-    <div class="mp-after"><small><img src="../brand/moneyglow-symbol-on-dark.svg?v=2" alt="" style="height:18px;width:18px;vertical-align:-4px;margin-right:5px">MoneyGlow AI</small><div class="mp-big">Debt-free by<br><span>your real date.</span></div><div class="mp-row"><div>Health score<b>out of 100</b></div><div>Pay first<b>Highest rate</b></div><div>Plan<b>3 actions</b></div></div></div>
-    <div class="mp-div"><i>⟷</i></div><span class="mp-tag l">BEFORE</span><span class="mp-tag r">AFTER</span></div></div>
-  <div class="card" id="mp-cmp" data-screen="home"><div class="mp-h">⚖️ Why MoneyGlow</div>
-    <div class="mp-cmpw"><div class="mp-panel"></div><div class="mp-grid"><div></div><div class="mp-hd">Budget apps</div><div class="mp-hd us">MoneyGlow</div>
-    ${['Tells you what to do next', 'Shows your real debt-free date', 'Simulates big decisions first', 'No server holds your data', 'Works fully offline'].map(r => `<div class="mp-lb">${r}</div><div class="c"><svg class="mp-x" viewBox="0 0 30 30"><path d="M9 9 L21 21"/><path d="M21 9 L9 21"/></svg></div><div class="c"><svg class="mp-ok" viewBox="0 0 30 30"><circle cx="15" cy="15" r="14"/><path d="M9 15.5 l4 4 l8 -9"/></svg></div>`).join('')}</div>
-    <button class="mp-cmpbtn" onclick="openPremiumModal()">See Premium →</button></div></div>`);
-  baLoop(); cmpLoop(); // review shuffle (reviewLoop) stays off until real user reviews exist
-}
-function onScreenLoop(el, fn, hold) {
-  let vis = false, running = false;
-  const go = async () => { running = true; do { await fn(); if (RM) break; await sleep(hold); } while (vis && isShown(el)); running = false; };
-  new IntersectionObserver(es => { vis = es[0].isIntersecting; if (vis && !running) go(); }, { threshold: .3 }).observe(el);
-}
-function reviewLoop() {
-  const box = $('#mp-reviews'), cards = $$('.mp-rc', box);
-  const depth = (c, d, t = true) => { c.style.transition = t ? 'transform .6s cubic-bezier(.65,0,.35,1), filter .6s, opacity .5s' : 'none'; c.style.transform = `translateY(${-18 * d}px) scale(${1 - .05 * d})`; c.style.filter = `brightness(${1 - .12 * d})`; c.style.zIndex = 10 - d; c.style.opacity = 1; };
-  let order = [...cards]; order.forEach((c, i) => depth(c, i, false));
-  onScreenLoop(box, async () => {
-    const f = order[0];
-    $$('.mp-stars span', f).forEach((s, i) => { s.classList.remove('on'); setTimeout(() => { s.classList.add('on'); s.animate([{ transform: 'scale(1.6)' }, { transform: 'scale(1)' }], { duration: 300, easing: E.spring }); }, RM ? 0 : i * 90); });
-    await sleep(6000); // long enough to read each card
-    f.style.transition = 'transform .5s cubic-bezier(.65,0,.35,1), opacity .5s'; f.style.transform = 'translateX(-130%) rotate(-12deg)'; f.style.opacity = 0;
-    order = [...order.slice(1), f]; order.slice(0, -1).forEach((c, i) => depth(c, i));
-    await sleep(500); depth(f, order.length - 1, false); f.style.opacity = 0; f.offsetHeight; f.style.transition = 'opacity .4s'; f.style.opacity = 1;
-  }, 0);
-}
-function baLoop() {
-  const w = $('.mp-baw'); let drag = false, p = 92;
-  const set = v => { p = v; w.style.setProperty('--p', v + '%'); };
-  set(92);
-  const ev = e => { const r = w.getBoundingClientRect(); set(Math.max(0, Math.min(100, (e.clientX - r.left) / r.width * 100))); };
-  w.addEventListener('pointerdown', e => { drag = true; w.setPointerCapture(e.pointerId); ev(e); }); w.addEventListener('pointermove', e => drag && ev(e)); w.addEventListener('pointerup', () => drag = false);
-  const to = (v, d) => { const a = p; return tween(d, t => !drag && set(a + (v - a) * t), 'inout'); };
-  onScreenLoop(w, async () => { w.classList.add('mv'); await to(6, 2000); w.classList.remove('mv'); await sleep(1500); w.classList.add('mv'); await to(50, 1200); await to(56, 180); await to(46, 200); await to(50, 180); w.classList.remove('mv'); await sleep(1500); w.classList.add('mv'); await to(92, 1100); w.classList.remove('mv'); }, 2500);
-}
-function cmpLoop() {
-  const box = $('#mp-cmp'), A = animator();
-  const paths = $$('path', box); paths.forEach(p => { p.style.strokeDasharray = 20; });
-  onScreenLoop(box, async () => {
-    A.clear(); paths.forEach(p => p.style.strokeDashoffset = 20); $$('.mp-lb, .mp-cmpbtn', box).forEach(e => e.style.opacity = 0);
-    A($('.mp-panel', box), [{ transform: 'scaleY(0)', opacity: 0 }, { transform: 'scaleY(1)', opacity: 1 }], { d: 800, e: E.expo });
-    const lbs = $$('.mp-lb', box), xs = $$('.mp-x', box), oks = $$('.mp-ok', box);
-    for (let i = 0; i < lbs.length; i++) {
-      await sleep(i ? 450 : 500);
-      A(lbs[i], [{ opacity: 0, transform: 'translateX(-30px)' }, { opacity: 1, transform: 'none' }], { d: 450 });
-      $$('path', xs[i]).forEach((p, j) => A(p, [{ strokeDashoffset: 20 }, { strokeDashoffset: 0 }], { d: 250, delay: 100 + j * 150 }));
-      A($('circle', oks[i]), [{ transform: 'scale(0)' }, { transform: 'scale(1)' }], { d: 450, delay: 150, e: E.spring });
-      A($('path', oks[i]), [{ strokeDashoffset: 20 }, { strokeDashoffset: 0 }], { d: 300, delay: 350 });
-    }
-    await sleep(500); await A($('.mp-cmpbtn', box), [{ opacity: 0, transform: 'scale(.6)' }, { opacity: 1, transform: 'scale(1)' }], { d: 600, e: E.spring });
-  }, 8000);
-}
-
 // ---------- 10 Price roll: Premium price spins like an odometer from the regular AED 39 ----------
 function odometer(el, from, to) {
   const s = String(to), f = String(from).padStart(s.length, '0');
@@ -236,7 +171,6 @@ if (typeof window.openPremiumModal === 'function') {
 
 // ---------- boot ----------
 function boot() {
-  addHomeCards();
   const home = () => document.body.getAttribute('data-active-screen') !== 'money' && isShown($('#sec-hero'));
   if (home()) { homeCounts(); bento(); }
   // replay counts + bento whenever someone returns to Home

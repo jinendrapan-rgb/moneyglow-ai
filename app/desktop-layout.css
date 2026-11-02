@@ -33,12 +33,6 @@
   body[data-active-screen="home"] #sec-progresspreview { grid-column: 1; }
   body[data-active-screen="home"] #sec-progresspreview { align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
   body[data-active-screen="home"] #sec-quickactions .card-body > div { gap: 10px; }
-  body[data-active-screen="home"] #mp-reviews { grid-column: span 1; }
-  body[data-active-screen="home"] #mp-ba { grid-column: 1 / -1; }
-  body[data-active-screen="home"] #mp-reviews + #mp-ba { grid-column: span 2; }
-  body[data-active-screen="home"] #mp-cmp { grid-column: 1 / -1; }
-  body[data-active-screen="home"] #mp-cmp .mp-cmpw { max-width: 860px; margin: 0 auto; }
-  body[data-active-screen="home"] #mp-ba .mp-baw { aspect-ratio: 21 / 8; max-width: 1100px; margin: 0 auto; }
 
   /* ---------- Other tabs: balanced columns ---------- */
   body:not([data-active-screen="home"]) .container.mg-cols { display: block; column-count: 2; column-gap: 20px; }
@@ -59,8 +53,6 @@
 }
 @media (min-width: 1024px) and (max-width: 1279px) {
   body[data-active-screen="home"] .container { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  body[data-active-screen="home"] #sec-hero, body[data-active-screen="home"] #sec-mission, body[data-active-screen="home"] #mp-ba { grid-column: 1 / -1; }
   body[data-active-screen="home"] #sec-aihub { grid-column: 2; grid-row: span 3; }
   body[data-active-screen="home"] #sec-aihub .card-body > div { grid-template-columns: 1fr; }
-  body[data-active-screen="home"] #mp-reviews { grid-column: 1 / -1; }
 }
