@@ -229,3 +229,27 @@ function loop(el, play, hold, reset, th = .3) {
   }, 4000, () => { done.style.opacity = 0; });
 })();
 })();
+
+// Referral links (?ref=CODE): new visitors stay on this page, every app link carries the code
+// (the app grants the friend trial from it), and an invite bar + phone install guide appear.
+(() => {
+  const m = location.search.match(/[?&]ref=([A-Za-z0-9_-]{1,32})/);
+  if (!m) return;
+  const ref = encodeURIComponent(m[1]);
+  document.querySelectorAll('a[href^="app/"]').forEach(a => { a.href = 'app/?ref=' + ref; });
+  const invite = document.getElementById('invite'), guide = document.getElementById('guide');
+  if (!invite || !guide) return;
+  const ua = navigator.userAgent;
+  const os = /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(ua) ? 'android' : 'desktop';
+  guide.querySelector(`.guide-steps[data-os="${os}"]`).classList.add('on');
+  invite.hidden = false;
+  const open = () => { guide.hidden = false; };
+  const close = () => { guide.hidden = true; };
+  invite.querySelector('[data-guide]').addEventListener('click', open);
+  invite.querySelector('.invite-x').addEventListener('click', () => { invite.hidden = true; });
+  guide.querySelector('[data-close]').addEventListener('click', close);
+  guide.addEventListener('click', e => { if (e.target === guide) close(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') close(); });
+  // phones get the guide on its own after a short look at the page
+  if (os !== 'desktop') setTimeout(() => { if (!invite.hidden) open(); }, 6000);
+})();

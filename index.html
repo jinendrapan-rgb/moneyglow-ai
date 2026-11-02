@@ -26,12 +26,13 @@
 <link rel="icon" href="brand/favicon.ico?v=2" sizes="any">
 <link rel="apple-touch-icon" href="brand/apple-touch-icon.png?v=2">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png?v=2">
-<link rel="stylesheet" href="landing.css?v=12">
+<link rel="stylesheet" href="landing.css?v=13">
 <script>
-  // Returning users (their data lives in this browser) and referral links (?ref=) go straight to the app.
+  // Returning users (their data lives in this browser) go straight to the app, keeping any ?ref=.
+  // New users on a referral link stay here; landing.js carries the code into the app links.
   // ?home always shows the landing page, even for returning users.
   try {
-    if (!/[?&]home\b/.test(location.search) && (localStorage.getItem('financeTracker_v2') || localStorage.getItem('financeTracker_hasOnboarded') || /[?&]ref=/.test(location.search)))
+    if (!/[?&]home\b/.test(location.search) && (localStorage.getItem('financeTracker_v2') || localStorage.getItem('financeTracker_hasOnboarded')))
       location.replace('app/' + location.search + location.hash);
   } catch (e) {}
 </script>
@@ -252,6 +253,24 @@
   <div><a href="terms.html">Terms</a><a href="privacy.html">Privacy</a><a href="refund.html">Refunds</a></div>
 </div></footer>
 
-<script src="landing.js?v=6"></script>
+<!-- Referral invite: shown only on ?ref= links (landing.js) -->
+<div class="invite" id="invite" hidden><div class="invite-in">
+  <img src="brand/moneyglow-symbol-on-dark.svg?v=2" alt="">
+  <div class="invite-txt"><b>A friend invited you to MoneyGlow AI</b><span>Your 7-day Premium trial starts when you open the app.</span></div>
+  <div class="invite-btns"><a class="btn pri" href="app/">Open the app</a><button class="btn ghost" type="button" data-guide>Add to my phone</button></div>
+  <button class="invite-x" type="button" aria-label="Close">×</button>
+</div></div>
+<div class="guide" id="guide" hidden><div class="guide-card" role="dialog" aria-modal="true" aria-labelledby="guideTitle">
+  <button class="invite-x" type="button" aria-label="Close" data-close>×</button>
+  <img src="brand/moneyglow-symbol-on-dark.svg?v=2" alt="" class="guide-glo">
+  <h3 id="guideTitle">Put MoneyGlow on your phone</h3>
+  <p class="guide-sub">No app store needed. It installs straight from your browser and opens like any other app.</p>
+  <ol class="guide-steps" data-os="ios"><li>Tap <b>Open the app</b> below.</li><li>Tap the <b>Share</b> button <span class="k">⬆︎</span> in Safari.</li><li>Tap <b>Add to Home Screen</b>, then <b>Add</b>.</li></ol>
+  <ol class="guide-steps" data-os="android"><li>Tap <b>Open the app</b> below.</li><li>Tap the <b>⋮</b> menu in Chrome.</li><li>Tap <b>Install app</b> or <b>Add to Home screen</b>.</li></ol>
+  <ol class="guide-steps" data-os="desktop"><li>Click <b>Open the app</b> below.</li><li>Click the <b>install icon</b> at the right of the address bar.</li><li>Or open this link on your phone and add it to your home screen.</li></ol>
+  <a class="btn pri guide-go" href="app/">Open the app</a>
+</div></div>
+
+<script src="landing.js?v=7"></script>
 </body>
 </html>

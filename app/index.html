@@ -5115,7 +5115,7 @@ body.theme-sunny #mgLogoTap .mg-brand-light, body.theme-blossom #mgLogoTap .mg-b
         localStorage.setItem('moneyglow_referralCode', code);
       }
       var el = document.getElementById('referralLinkDisplay');
-      if (el) el.textContent = location.origin + location.pathname + '?ref=' + code;
+      if (el) el.textContent = mgReferralBase() + '?ref=' + code;
       var stats = {};
       try { stats = JSON.parse(localStorage.getItem('moneyglow_referralStats') || '{}'); } catch(e){}
       var shared = document.getElementById('refStatShared');
@@ -14558,6 +14558,12 @@ function removeSubscription(i){
 // Users earn 1 free month of premium per friend who signs up
 // Earn 3 referrals = locked-in Founder pricing (AED 19/mo, while subscribed)
 
+// Referral links open the landing page (one level above app/), which shows new friends
+// the invite + install guide and passes ?ref= on to the app.
+function mgReferralBase(){
+  return new URL('../', location.href).href;
+}
+
 function getReferralCode(){
   let code = localStorage.getItem('moneyglow_referralCode');
   if (!code) {
@@ -14603,7 +14609,7 @@ function renderReferral(){
     try { if (typeof getReferralCode === 'function') code = getReferralCode(); } catch(e){}
     try { if (typeof getReferralStats === 'function') stats = getReferralStats(); } catch(e){}
 
-    var baseUrl = location.origin + location.pathname;
+    var baseUrl = mgReferralBase();
     var fullLink = baseUrl + '?ref=' + code;
     var buyersCount = stats.buyers || 0;
     var signupsCount = stats.signups || 0;
@@ -14827,7 +14833,7 @@ window.checkMyRewards = function(){
 
 function copyReferralLink(){
   const code = getReferralCode();
-  const link = `${location.origin}${location.pathname}?ref=${code}`;
+  const link = `${mgReferralBase()}?ref=${code}`;
   if (navigator.clipboard) {
     navigator.clipboard.writeText(link).then(() => {
       updateReferralStats('shared', 1);
@@ -14845,7 +14851,7 @@ function copyReferralLink(){
 
 function shareReferral(method){
   const code = getReferralCode();
-  const link = `${location.origin}${location.pathname}?ref=${code}`;
+  const link = `${mgReferralBase()}?ref=${code}`;
   const msg = `🌟 Try MoneyGlow AI — the smartest personal finance tracker.\n\n✨ Get out of debt faster\n🔒 100% private (data stays on YOUR phone)\n🤖 AI assistant included\n\n🎁 BONUS for you: Use my link for a 7-day free Premium trial + 10% off if you upgrade.\n\n${link}`;
 
   if (method === 'whatsapp') {
@@ -16726,7 +16732,7 @@ function sendNotif(title, body, tag){
     };
     // Try to use icon if available
     try {
-      const icon = location.origin + location.pathname.replace(/[^/]*$/, '') + 'icons/icon-192.png';
+      const icon = new URL('../brand/icon-192.png', location.href).href;
       options.icon = icon;
       options.badge = icon;
     } catch(e){}
