@@ -29,8 +29,9 @@
 <link rel="stylesheet" href="landing.css?v=12">
 <script>
   // Returning users (their data lives in this browser) and referral links (?ref=) go straight to the app.
+  // ?home always shows the landing page, even for returning users.
   try {
-    if (localStorage.getItem('financeTracker_v2') || localStorage.getItem('financeTracker_hasOnboarded') || /[?&]ref=/.test(location.search))
+    if (!/[?&]home\b/.test(location.search) && (localStorage.getItem('financeTracker_v2') || localStorage.getItem('financeTracker_hasOnboarded') || /[?&]ref=/.test(location.search)))
       location.replace('app/' + location.search + location.hash);
   } catch (e) {}
 </script>
