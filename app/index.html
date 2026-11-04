@@ -9413,7 +9413,7 @@ async function generateAIPlan(){
     if (aiSettings.provider !== 'none' && aiSettings.apiKey) {
       const planPrompt = 'Enhance this financial plan with a warm, personalized tone. Keep all numbers and recommendations exactly as provided. Add encouraging closing. Plan:\n' + plan;
       const enhanced = await askRealAI(planPrompt);
-      if (enhanced) plan = enhanced;
+      if (enhanced) plan = renderAIReply(enhanced);
     }
   } catch(e) {
     // Offline plan already built, use it
@@ -9858,31 +9858,31 @@ function renderAlerts(){
 
     // Overdue
     if (days !== null && days < 0) {
-      alerts.push({ type:'urgent', title:`🚨 ${d.name} is OVERDUE`, msg:`${Math.abs(days)} days past due. Pay <strong>AED ${fmt(emi)}</strong> immediately to avoid late fees & credit damage.`, priority:1 });
+      alerts.push({ type:'urgent', title:`🚨 ${escapeHtml(d.name)} is OVERDUE`, msg:`${Math.abs(days)} days past due. Pay <strong>AED ${fmt(emi)}</strong> immediately to avoid late fees & credit damage.`, priority:1 });
     }
     // Over limit
     if (limit > 0 && bal > limit) {
-      alerts.push({ type:'urgent', title:`🚨 ${d.name} is OVER LIMIT`, msg:`${fmt(bal)} vs limit ${fmt(limit)} → over-limit fees + high APR (${apr}%). Bring it under the limit ASAP.`, priority:1 });
+      alerts.push({ type:'urgent', title:`🚨 ${escapeHtml(d.name)} is OVER LIMIT`, msg:`${fmt(bal)} vs limit ${fmt(limit)} → over-limit fees + high APR (${apr}%). Bring it under the limit ASAP.`, priority:1 });
     }
     // High utilization (over 80%)
     else if (limit > 0 && bal/limit > 0.8) {
-      alerts.push({ type:'warn', title:`⚠️ ${d.name} is ${((bal/limit)*100).toFixed(0)}% utilized`, msg:`High utilization wrecks credit score. Pay it down below 30% utilization.`, priority:2 });
+      alerts.push({ type:'warn', title:`⚠️ ${escapeHtml(d.name)} is ${((bal/limit)*100).toFixed(0)}% utilized`, msg:`High utilization wrecks credit score. Pay it down below 30% utilization.`, priority:2 });
     }
     // High APR
     if (apr >= 30 && bal > 0) {
-      alerts.push({ type:'warn', title:`⚠️ ${d.name} has expensive APR (${apr}%)`, msg:`This is one of your most expensive debts. Prioritize paying it off (avalanche method).`, priority:3 });
+      alerts.push({ type:'warn', title:`⚠️ ${escapeHtml(d.name)} has expensive APR (${apr}%)`, msg:`This is one of your most expensive debts. Prioritize paying it off (avalanche method).`, priority:3 });
     }
     // Due soon (within 7 days, not overdue)
     if (days !== null && days >= 0 && days <= 7) {
-      alerts.push({ type:'warn', title:`⏰ ${d.name} due in ${days} day${days===1?'':'s'}`, msg:`Pay <strong>AED ${fmt(emi)}</strong> by ${escapeHtml(d.due)} to avoid late fees.`, priority:2 });
+      alerts.push({ type:'warn', title:`⏰ ${escapeHtml(d.name)} due in ${days} day${days===1?'':'s'}`, msg:`Pay <strong>AED ${fmt(emi)}</strong> by ${escapeHtml(d.due)} to avoid late fees.`, priority:2 });
     }
     // Payment too low to ever pay off
     if (apr > 0 && emi > 0 && emi <= bal * (apr/100/12)) {
-      alerts.push({ type:'urgent', title:`🚨 ${d.name} — payment too low!`, msg:`Your EMI of AED ${fmt(emi)} doesn't even cover interest (AED ${fmt(bal*apr/100/12)}/mo). This debt will grow forever. Increase the payment!`, priority:1 });
+      alerts.push({ type:'urgent', title:`🚨 ${escapeHtml(d.name)} — payment too low!`, msg:`Your EMI of AED ${fmt(emi)} doesn't even cover interest (AED ${fmt(bal*apr/100/12)}/mo). This debt will grow forever. Increase the payment!`, priority:1 });
     }
     // Healthy low-APR loan
     if (apr > 0 && apr <= 12 && bal > 5000 && !(days !== null && days < 0)) {
-      alerts.push({ type:'ok', title:`✅ ${d.name} on track`, msg:`${apr}% APR — this is cheap debt. Pay EMI but don't prepay; kill high-APR debts first.`, priority:5 });
+      alerts.push({ type:'ok', title:`✅ ${escapeHtml(d.name)} on track`, msg:`${apr}% APR — this is cheap debt. Pay EMI but don't prepay; kill high-APR debts first.`, priority:5 });
     }
   });
 
@@ -10802,7 +10802,7 @@ async function sendAIMessage(){
   let reply;
   try {
     if (aiSettings.provider !== 'none' && aiSettings.apiKey) {
-      reply = await askRealAI(text);
+      reply = renderAIReply(await askRealAI(text));
     } else {
       reply = answerOffline(text);
       if (reply === null) return; // handled internally (e.g. install guide)
@@ -11089,6 +11089,12 @@ function generalHelp(){
 }
 
 // ---------- REAL AI ----------
+// Model output goes into the chat's innerHTML, and it can repeat text from anything the
+// model read, so it is escaped first. Only **bold** and line breaks become markup.
+function renderAIReply(text){
+  return escapeHtml(text).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>');
+}
+
 async function askRealAI(question){
   const context = buildAIContext();
   const systemPrompt = 'You are a helpful, friendly personal finance assistant embedded inside the user\'s personal finance tracker app. The user is dealing with significant debt and trying to get debt-free.\n\nCURRENT USER FINANCIAL DATA:\n' + context + '\n\nINSTRUCTIONS:\n- Give specific, actionable advice based on their actual numbers above\n- Be encouraging but realistic\n- Use AED currency (UAE)\n- Keep responses under 200 words unless they ask for detail\n- Use HTML for formatting (<strong>, <br>, lists)\n- If they ask to "fix" something, give them clear steps\n- Never invent numbers — only use what is in the data above\n- Be warm and supportive — they are working hard to get out of debt';
@@ -14882,7 +14888,10 @@ function shareReferral(method){
 // Detect when this user arrived via someone's referral link
 function detectReferral(){
   const params = new URLSearchParams(location.search);
-  const ref = params.get('ref');
+  // Same shape landing.js accepts. This value comes straight from the URL and ends up in
+  // showNudge()'s innerHTML, so anything else is dropped rather than rendered.
+  const rawRef = params.get('ref');
+  const ref = rawRef && /^[A-Za-z0-9_-]{1,32}$/.test(rawRef) ? rawRef : null;
   if (ref && !localStorage.getItem('moneyglow_referredBy')) {
     localStorage.setItem('moneyglow_referredBy', ref);
     // Log the referral click to Sheets
